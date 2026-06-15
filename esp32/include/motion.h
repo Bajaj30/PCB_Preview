@@ -23,8 +23,16 @@
 // ── Pin definitions ───────────────────────────────────────────────
 #define X_STEP_PIN  21
 #define X_DIR_PIN   19
+#define X_UART_PIN  16
+
 #define Y_STEP_PIN  33
 #define Y_DIR_PIN   32
+#define Y_UART_PIN  17
+
+// ── TMC2209 Configuration ─────────────────────────────────────────
+#define R_SENSE           0.11f   // Standard TMC2209 sense resistor
+#define DRIVER_ADDRESS    0       // Default address (MS1=GND, MS2=GND)
+#define MOTOR_CURRENT_MA  800     // 800mA RMS current (adjustable)
 
 // ── Stepper timing ───────────────────────────────────────────────
 #define STEP_DELAY_US   500   // microseconds between step pulses (speed control)

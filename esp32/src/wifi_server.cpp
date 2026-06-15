@@ -6,13 +6,18 @@
  */
 
 #include "wifi_server.h"
+#include "laser.h"
 #include "motion.h"
-#include <WiFi.h>
+#include "gcode.h"
 #include <WebServer.h>
+#include <WiFi.h>
+
+// ── FreeRTOS queue (created in main.cpp) ──────────────────────────
+extern QueueHandle_t gcodeQueue;
 
 // ── WiFi credentials ──────────────────────────────────────────────
-static const char* SSID     = "Galaxy";
-static const char* PASSWORD = "Hello@123";
+static const char *SSID = "Galaxy_S25";
+static const char *PASSWORD = "Hello@123";
 
 // ── Web server instance ───────────────────────────────────────────
 static WebServer server(80);
@@ -159,6 +164,37 @@ static const char INDEX_HTML[] PROGMEM = R"rawhtml(
     letter-spacing: 0.1em;
   }
 
+  /* ── Laser controls ── */
+  .laser-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    width: 100%;
+    max-width: 380px;
+    justify-content: space-between;
+  }
+  .laser-row input[type="range"] {
+    flex-grow: 1;
+    margin: 0 10px;
+  }
+  .btn-laser {
+    background: transparent;
+    color: #ff3366;
+    border: 1px solid #ff3366;
+    padding: 6px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .btn-laser.active {
+    background: #ff3366;
+    color: #fff;
+  }
+
   /* ── Legend ── */
   .legend {
     display: flex;
@@ -217,6 +253,13 @@ static const char INDEX_HTML[] PROGMEM = R"rawhtml(
   </select>
 </div>
 
+<div class="laser-row">
+  <label>LASER</label>
+  <input type="range" id="laserPwr" min="0" max="1000" value="100">
+  <span id="laserVal" style="width:40px; text-align:right;">10%</span>
+  <button id="laserBtn" class="btn-laser" onclick="toggleLaser()">FIRE</button>
+</div>
+
 <div class="dpad">
   <!-- Row 1 -->
   <div></div>
@@ -263,6 +306,37 @@ static const char INDEX_HTML[] PROGMEM = R"rawhtml(
     el.scrollTop = el.scrollHeight;
   }
 
+  document.getElementById('laserPwr').addEventListener('input', function() {
+    let p = this.value;
+    document.getElementById('laserVal').textContent = Math.round((p/1000)*100) + '%';
+  });
+
+  async function toggleLaser() {
+    const btn = document.getElementById('laserBtn');
+    const isOn = btn.classList.contains('active');
+    const pwr = document.getElementById('laserPwr').value;
+    
+    try {
+      const res = await fetch('/laser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `state=${isOn ? 0 : 1}&power=${pwr}`
+      });
+      if (res.ok) {
+        if (isOn) {
+          btn.classList.remove('active');
+          btn.textContent = 'FIRE';
+        } else {
+          btn.classList.add('active');
+          btn.textContent = 'OFF';
+        }
+        log(isOn ? 'LASER OFF' : 'LASER ON (S' + pwr + ')');
+      }
+    } catch(e) {
+      log('LASER ERR', 'err');
+    }
+  }
+
   async function move(axis, dir) {
     const steps = parseInt(document.getElementById('stepSize').value);
     const label = axis.toUpperCase() + (dir ? '+' : '-') + ' x' + steps;
@@ -296,70 +370,159 @@ static const char INDEX_HTML[] PROGMEM = R"rawhtml(
 
 // ── HTTP handlers ──────────────────────────────────────────────────
 
-static void handleRoot() {
-    server.send_P(200, "text/html", INDEX_HTML);
-}
+static void handleRoot() { server.send_P(200, "text/html", INDEX_HTML); }
 
 static void handleMove() {
-    if (!server.hasArg("axis") || !server.hasArg("dir") || !server.hasArg("steps")) {
-        server.send(400, "text/plain", "missing params");
-        return;
-    }
+  server.sendHeader("Access-Control-Allow-Origin", "*");
 
-    String axis  = server.arg("axis");
-    int    dir   = server.arg("dir").toInt();
-    int    steps = server.arg("steps").toInt();
+  if (!server.hasArg("axis") || !server.hasArg("dir") ||
+      !server.hasArg("steps")) {
+    server.send(400, "text/plain", "missing params");
+    return;
+  }
 
-    steps = constrain(steps, 1, 6400); // safety cap: max 2 full revs per command
+  String axis = server.arg("axis");
+  int dir = server.arg("dir").toInt();
+  int steps = server.arg("steps").toInt();
 
-    setStopFlag(false);
+  steps = constrain(steps, 1, 6400); // safety cap: max 2 full revs per command
 
-    if (axis == "x") {
-        stepMotor(X_STEP_PIN, X_DIR_PIN, dir, steps);
-        server.send(200, "text/plain", "X OK");
-    } else if (axis == "y") {
-        stepMotor(Y_STEP_PIN, Y_DIR_PIN, dir, steps);
-        server.send(200, "text/plain", "Y OK");
-    } else {
-        server.send(400, "text/plain", "unknown axis");
-    }
+  setStopFlag(false);
+
+  if (axis == "x") {
+    stepMotor(X_STEP_PIN, X_DIR_PIN, dir, steps);
+    server.send(200, "text/plain", "X OK");
+  } else if (axis == "y") {
+    stepMotor(Y_STEP_PIN, Y_DIR_PIN, dir, steps);
+    server.send(200, "text/plain", "Y OK");
+  } else {
+    server.send(400, "text/plain", "unknown axis");
+  }
 }
 
 static void handleStop() {
-    setStopFlag(true);
-    server.send(200, "text/plain", "stopped");
+  setStopFlag(true);
+  turnLaserOff();
+  // Flush the queue so pending lines don't execute after stop
+  if (gcodeQueue) xQueueReset(gcodeQueue);
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.send(200, "text/plain", "stopped");
+}
+
+static void handleLaser() {
+  if (!server.hasArg("state") || !server.hasArg("power")) {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(400, "text/plain", "missing params");
+    return;
+  }
+  int state = server.arg("state").toInt();
+  float power = server.arg("power").toFloat();
+
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  if (state == 1) {
+    setLaserPower(power);
+    server.send(200, "text/plain", "laser on");
+  } else {
+    turnLaserOff();
+    server.send(200, "text/plain", "laser off");
+  }
+}
+
+// ── G-code streaming endpoint ─────────────────────────────────────
+// Receives a single G-code line and pushes it into the FreeRTOS queue.
+// Returns 200 if accepted, 429 if queue is full (client should retry).
+static void handleGCode() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+
+  if (!server.hasArg("line")) {
+    server.send(400, "text/plain", "missing 'line' param");
+    return;
+  }
+
+  String lineStr = server.arg("line");
+  if (lineStr.length() == 0 || lineStr.length() > 255) {
+    server.send(400, "text/plain", "invalid line length");
+    return;
+  }
+
+  // Copy into a fixed-size buffer for the queue
+  char buf[256];
+  lineStr.toCharArray(buf, sizeof(buf));
+
+  // Non-blocking push (timeout = 0). If full, return 429.
+  if (xQueueSend(gcodeQueue, buf, 0) == pdTRUE) {
+    server.send(200, "text/plain", "ok");
+  } else {
+    server.send(429, "text/plain", "queue full");
+  }
+}
+
+// ── Status endpoint ───────────────────────────────────────────────
+// Returns current machine position and queue state as JSON.
+static void handleStatus() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+
+  int qFree = gcodeQueue ? uxQueueSpacesAvailable(gcodeQueue) : 0;
+  int qTotal = 5;  // GCODE_QUEUE_DEPTH
+
+  String json = "{";
+  json += "\"x\":" + String(getPositionX(), 2) + ",";
+  json += "\"y\":" + String(getPositionY(), 2) + ",";
+  json += "\"queue_free\":" + String(qFree) + ",";
+  json += "\"queue_total\":" + String(qTotal) + ",";
+  json += "\"finished\":" + String(isGCodeFinished() ? "true" : "false") + ",";
+  json += "\"stopped\":" + String(getStopFlag() ? "true" : "false");
+  json += "}";
+
+  server.send(200, "application/json", json);
+}
+
+// ── CORS preflight handler ────────────────────────────────────────
+static void handleCORS() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+  server.send(204);
 }
 
 static void handleNotFound() {
-    server.send(404, "text/plain", "not found");
+  // Handle CORS preflight for any route
+  if (server.method() == HTTP_OPTIONS) {
+    handleCORS();
+    return;
+  }
+  server.send(404, "text/plain", "not found");
 }
 
 // ── Public API ────────────────────────────────────────────────────
 
 void initWiFi() {
-    Serial.printf("[wifi] Connecting to: %s\n", SSID);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(SSID, PASSWORD);
-    
-    // Set TX power immediately after begin() to reduce current spikes
-    WiFi.setTxPower(WIFI_POWER_11dBm); 
+  Serial.printf("[wifi] Connecting to: %s\n", SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(SSID, PASSWORD);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.printf("\n[wifi] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
+  // Set TX power immediately after begin() to reduce current spikes
+  WiFi.setTxPower(WIFI_POWER_11dBm);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.printf("\n[wifi] Connected! IP: %s\n",
+                WiFi.localIP().toString().c_str());
 }
 
 void initWebServer() {
-    server.on("/",     handleRoot);
-    server.on("/move", HTTP_POST, handleMove);
-    server.on("/stop", handleStop);
-    server.onNotFound(handleNotFound);
-    server.begin();
-    Serial.println("[wifi] Web server started on port 80");
+  server.on("/", handleRoot);
+  server.on("/move", HTTP_POST, handleMove);
+  server.on("/stop", handleStop);
+  server.on("/laser", HTTP_POST, handleLaser);
+  server.on("/gcode", HTTP_POST, handleGCode);
+  server.on("/gcode", HTTP_OPTIONS, handleCORS);
+  server.on("/status", handleStatus);
+  server.onNotFound(handleNotFound);
+  server.begin();
+  Serial.println("[wifi] Web server started on port 80");
 }
 
-void handleServer() {
-    server.handleClient();
-}
+void handleServer() { server.handleClient(); }

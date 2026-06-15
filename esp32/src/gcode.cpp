@@ -17,6 +17,7 @@
 
 #include "gcode.h"
 #include "motion.h"
+#include "laser.h"
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -24,6 +25,7 @@
 // ── Interpreter state ─────────────────────────────────────────────
 static bool absoluteMode = true;      // G90 = true, G91 = false
 static float currentFeedRate = DEFAULT_FEED_RATE;
+static float currentLaserPower = 0.0;
 static bool programFinished = false;
 static int linesExecuted = 0;
 
@@ -122,17 +124,27 @@ bool executeGCodeLine(const char* line) {
     int gCmd = findCommand(buf, 'G');
     int mCmd = findCommand(buf, 'M');
 
-    bool hasX, hasY, hasF, hasP;
+    bool hasX, hasY, hasF, hasP, hasS;
     float xVal = findParam(buf, 'X', &hasX);
     float yVal = findParam(buf, 'Y', &hasY);
     float fVal = findParam(buf, 'F', &hasF);
     float pVal = findParam(buf, 'P', &hasP);
+    float sVal = findParam(buf, 'S', &hasS);
 
     // Update feed rate if specified
     if (hasF && fVal > 0) {
         currentFeedRate = fVal;
         if (currentFeedRate > MAX_FEED_RATE) {
             currentFeedRate = MAX_FEED_RATE;
+        }
+    }
+
+    // Update laser power if specified
+    if (hasS) {
+        currentLaserPower = sVal;
+        // If the laser is currently active, apply the new power immediately
+        if (isLaserOn()) {
+            setLaserPower(currentLaserPower);
         }
     }
 
@@ -215,11 +227,25 @@ bool executeGCodeLine(const char* line) {
         switch (mCmd) {
             case 2:
                 // M2 — Program end
+                turnLaserOff();
                 Serial.println("[gcode] === Program End (M2) ===");
                 Serial.printf("[gcode] Lines executed: %d\n", linesExecuted);
                 Serial.printf("[gcode] Final position: (%.2f, %.2f) mm\n",
                               getPositionX(), getPositionY());
                 programFinished = true;
+                return true;
+
+            case 3:
+            case 4:
+                // M3 / M4 — Laser On
+                setLaserPower(currentLaserPower);
+                Serial.printf("[gcode] Laser ON (S%.1f)\n", currentLaserPower);
+                return true;
+
+            case 5:
+                // M5 — Laser Off
+                turnLaserOff();
+                Serial.println("[gcode] Laser OFF");
                 return true;
 
             default:
@@ -278,5 +304,7 @@ void resetGCode() {
     linesExecuted = 0;
     absoluteMode = true;
     currentFeedRate = DEFAULT_FEED_RATE;
+    currentLaserPower = 0.0;
+    turnLaserOff();
     Serial.println("[gcode] Interpreter reset");
 }

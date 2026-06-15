@@ -925,6 +925,217 @@
 
     .run-status.visible { display: block; }
 
+    /* ── ESP32 Machine Controls ── */
+    .esp-section {
+      margin-top: 4px;
+    }
+
+    .esp-connect-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .esp-connect-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    .esp-connect-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-connect {
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-connect:hover { background: rgba(0, 212, 255, 0.2); }
+    .btn-connect.connected {
+      background: rgba(0, 255, 136, 0.1);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .esp-status {
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .esp-status .dot-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #ff4444;
+    }
+
+    .esp-status .dot-indicator.online {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    /* ESP32 D-pad (compact version for sidebar) */
+    .esp-dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 36px);
+      grid-template-rows: repeat(3, 36px);
+      gap: 3px;
+      justify-content: center;
+      margin: 8px 0;
+    }
+
+    .esp-dpad-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.1s;
+      user-select: none;
+    }
+
+    .esp-dpad-btn:hover { background: rgba(255,255,255,0.08); }
+    .esp-dpad-btn:active { transform: scale(0.9); background: rgba(0, 212, 255, 0.15); }
+    .esp-dpad-btn.home-btn { font-size: 12px; color: var(--muted); }
+    .esp-dpad-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ESP32 Laser controls */
+    .laser-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .laser-control input[type="range"] {
+      flex: 1;
+      height: 4px;
+    }
+
+    .laser-control .pwr-label {
+      font-size: 10px;
+      color: var(--muted);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    .btn-fire {
+      background: transparent;
+      color: #ff3366;
+      border: 1px solid #ff3366;
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .btn-fire.active {
+      background: #ff3366;
+      color: #fff;
+    }
+
+    .btn-fire:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Streaming progress */
+    .stream-progress {
+      margin-top: 8px;
+      display: none;
+    }
+
+    .stream-progress.visible { display: block; }
+
+    .stream-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .stream-bar-fill {
+      height: 100%;
+      background: var(--green);
+      width: 0%;
+      transition: width 0.15s linear;
+    }
+
+    .stream-status {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .btn-stream {
+      width: 100%;
+      padding: 8px;
+      background: rgba(0, 255, 136, 0.08);
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: 6px;
+    }
+
+    .btn-stream:hover { background: rgba(0, 255, 136, 0.15); }
+    .btn-stream:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-estop {
+      width: 100%;
+      padding: 8px;
+      background: rgba(255, 68, 68, 0.08);
+      border: 1px solid #ff4444;
+      color: #ff4444;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .btn-estop:hover { background: rgba(255, 68, 68, 0.2); }
+    .btn-estop.visible { display: block; }
+
+    .esp-pos {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      margin: 4px 0;
+    }
+
+    .esp-pos .coord-val {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
     @media (max-width: 768px) {
       .workspace {
         grid-template-columns: 1fr;
@@ -1031,6 +1242,74 @@
         </a>
 
         <div class="gcode-stats" id="gcode-stats"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- ── ESP32 Machine Control ── -->
+      <h2>⚡ Machine Control</h2>
+      <div class="esp-section">
+
+        <!-- Connection -->
+        <div class="esp-connect-row">
+          <input type="text" id="esp-ip" placeholder="ESP32 IP (e.g. 192.168.1.5)" />
+          <button class="btn-connect" id="btn-esp-connect" onclick="espConnect()">Connect</button>
+        </div>
+        <div class="esp-status" id="esp-status">
+          <div class="dot-indicator" id="esp-dot"></div>
+          <span id="esp-status-text">Disconnected</span>
+        </div>
+
+        <!-- Live position -->
+        <div class="esp-pos" id="esp-pos" style="display:none;">
+          Machine: X <span class="coord-val" id="esp-x">0.00</span> &nbsp; Y <span class="coord-val" id="esp-y">0.00</span> mm
+        </div>
+
+        <!-- D-pad Jog (sends to ESP32) -->
+        <div class="esp-dpad" id="esp-dpad">
+          <div></div>
+          <button class="esp-dpad-btn" disabled onclick="espJog('y', 1)" title="Y+">▲</button>
+          <div></div>
+          <button class="esp-dpad-btn" disabled onclick="espJog('x', 0)" title="X-">◀</button>
+          <button class="esp-dpad-btn home-btn" disabled onclick="espHome()" title="Home">⌂</button>
+          <button class="esp-dpad-btn" disabled onclick="espJog('x', 1)" title="X+">▶</button>
+          <div></div>
+          <button class="esp-dpad-btn" disabled onclick="espJog('y', 0)" title="Y-">▼</button>
+          <div></div>
+        </div>
+
+        <select class="step-select" id="esp-step" style="margin-bottom:8px;">
+          <option value="16">1 step (0.0125mm)</option>
+          <option value="80">5 steps (0.0625mm)</option>
+          <option value="160" selected>10 steps (0.125mm)</option>
+          <option value="400">25 steps (0.3125mm)</option>
+          <option value="800">50 steps (0.625mm)</option>
+          <option value="1600">100 steps (1.25mm)</option>
+        </select>
+
+        <!-- Laser Control -->
+        <div style="font-size:10px; color:var(--muted); margin:6px 0 2px; letter-spacing:0.1em;">LASER</div>
+        <div class="laser-control">
+          <input type="range" id="esp-laser-pwr" min="0" max="1000" value="100" disabled />
+          <span class="pwr-label" id="esp-laser-pwr-label">10%</span>
+          <button class="btn-fire" id="btn-fire" disabled onclick="espToggleLaser()">FIRE</button>
+        </div>
+
+        <!-- G-Code Streaming -->
+        <button class="btn-stream" id="btn-stream" disabled onclick="espStreamGCode()">
+          ▶ Stream to ESP32
+        </button>
+        <button class="btn-estop" id="btn-estop" onclick="espEmergencyStop()">
+          ⏹ EMERGENCY STOP
+        </button>
+
+        <div class="stream-progress" id="stream-progress">
+          <div class="stream-bar">
+            <div class="stream-bar-fill" id="stream-bar-fill"></div>
+          </div>
+          <div class="stream-status" id="stream-status"></div>
+        </div>
+
       </div>
 
       {% else %}
@@ -1880,6 +2159,242 @@
       const badge = document.getElementById('mode-badge');
       badge.textContent = mode.toUpperCase();
       badge.className = 'mode-badge ' + mode;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // ── ESP32 Machine Control Logic ──────────────────────────────
+    // ════════════════════════════════════════════════════════════════
+
+    let espIP = '';
+    let espConnected = false;
+    let isStreaming = false;
+    let streamAbort = false;
+    let statusPollTimer = null;
+
+    function espConnect() {
+      const ip = document.getElementById('esp-ip').value.trim();
+      if (!ip) { alert('Enter the ESP32 IP address'); return; }
+      espIP = ip;
+
+      document.getElementById('esp-status-text').textContent = 'Connecting...';
+
+      // Try to reach the /status endpoint
+      fetch(`http://${espIP}/status`, { signal: AbortSignal.timeout(3000) })
+        .then(r => r.json())
+        .then(data => {
+          espConnected = true;
+
+          // Update UI
+          document.getElementById('esp-dot').classList.add('online');
+          document.getElementById('esp-status-text').textContent = `Connected (${espIP})`;
+          document.getElementById('btn-esp-connect').textContent = '✓ Online';
+          document.getElementById('btn-esp-connect').classList.add('connected');
+          document.getElementById('esp-pos').style.display = 'block';
+
+          // Enable controls
+          document.querySelectorAll('.esp-dpad-btn').forEach(b => b.disabled = false);
+          document.getElementById('esp-laser-pwr').disabled = false;
+          document.getElementById('btn-fire').disabled = false;
+          document.getElementById('btn-stream').disabled = false;
+
+          // Start polling position
+          espPollStatus();
+          statusPollTimer = setInterval(espPollStatus, 1500);
+
+          // Update position display
+          document.getElementById('esp-x').textContent = data.x;
+          document.getElementById('esp-y').textContent = data.y;
+        })
+        .catch(err => {
+          espConnected = false;
+          document.getElementById('esp-dot').classList.remove('online');
+          document.getElementById('esp-status-text').textContent = 'Connection failed: ' + err.message;
+          document.getElementById('btn-esp-connect').textContent = 'Retry';
+          document.getElementById('btn-esp-connect').classList.remove('connected');
+        });
+    }
+
+    function espPollStatus() {
+      if (!espConnected) return;
+      fetch(`http://${espIP}/status`, { signal: AbortSignal.timeout(2000) })
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('esp-x').textContent = data.x;
+          document.getElementById('esp-y').textContent = data.y;
+        })
+        .catch(() => {});
+    }
+
+    async function espJog(axis, dir) {
+      if (!espConnected) return;
+      const steps = parseInt(document.getElementById('esp-step').value);
+      try {
+        await fetch(`http://${espIP}/move`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `axis=${axis}&dir=${dir}&steps=${steps}`
+        });
+        // Refresh position after jog
+        setTimeout(espPollStatus, 100);
+      } catch(e) {
+        console.error('Jog failed:', e);
+      }
+    }
+
+    async function espHome() {
+      if (!espConnected) return;
+      // Send G28 via the /gcode endpoint
+      try {
+        await fetch(`http://${espIP}/gcode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'line=G28'
+        });
+        setTimeout(espPollStatus, 500);
+      } catch(e) {
+        console.error('Home failed:', e);
+      }
+    }
+
+    // Laser power slider live update
+    document.getElementById('esp-laser-pwr').addEventListener('input', function() {
+      const pct = Math.round((this.value / 1000) * 100);
+      document.getElementById('esp-laser-pwr-label').textContent = pct + '%';
+    });
+
+    async function espToggleLaser() {
+      if (!espConnected) return;
+      const btn = document.getElementById('btn-fire');
+      const isOn = btn.classList.contains('active');
+      const pwr = document.getElementById('esp-laser-pwr').value;
+
+      try {
+        await fetch(`http://${espIP}/laser`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `state=${isOn ? 0 : 1}&power=${pwr}`
+        });
+        if (isOn) {
+          btn.classList.remove('active');
+          btn.textContent = 'FIRE';
+        } else {
+          btn.classList.add('active');
+          btn.textContent = 'OFF';
+        }
+      } catch(e) {
+        console.error('Laser toggle failed:', e);
+      }
+    }
+
+    // ── G-Code Streaming ─────────────────────────────────────────
+
+    async function espStreamGCode() {
+      if (!espConnected || isStreaming) return;
+
+      // Fetch the raw G-code text from the Python server
+      let gcodeText;
+      try {
+        const res = await fetch('/download-gcode');
+        if (!res.ok) {
+          alert('No G-code file. Generate G-code first.');
+          return;
+        }
+        gcodeText = await res.text();
+      } catch(e) {
+        alert('Failed to load G-code: ' + e.message);
+        return;
+      }
+
+      // Parse into lines, skip empty and comment-only lines
+      const lines = gcodeText.split('\n')
+        .map(l => l.trim())
+        .filter(l => l.length > 0 && !l.startsWith(';'));
+
+      if (lines.length === 0) {
+        alert('G-code file is empty.');
+        return;
+      }
+
+      // Enter streaming mode
+      isStreaming = true;
+      streamAbort = false;
+      document.getElementById('btn-stream').disabled = true;
+      document.getElementById('btn-estop').classList.add('visible');
+      document.getElementById('stream-progress').classList.add('visible');
+      document.getElementById('stream-status').textContent = `Streaming 0/${lines.length}...`;
+      document.getElementById('stream-bar-fill').style.width = '0%';
+
+      // Stream line by line
+      for (let i = 0; i < lines.length; i++) {
+        if (streamAbort) break;
+
+        const line = lines[i];
+        let sent = false;
+        let retries = 0;
+        const MAX_RETRIES = 200;  // ~10 seconds max wait per line
+
+        while (!sent && !streamAbort && retries < MAX_RETRIES) {
+          try {
+            const res = await fetch(`http://${espIP}/gcode`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `line=${encodeURIComponent(line)}`
+            });
+
+            if (res.status === 200) {
+              sent = true;
+            } else if (res.status === 429) {
+              // Queue full — wait and retry
+              await new Promise(r => setTimeout(r, 50));
+              retries++;
+            } else {
+              // Unexpected error
+              console.error(`ESP32 returned ${res.status} for line: ${line}`);
+              sent = true;  // Skip this line
+            }
+          } catch(e) {
+            // Network error — wait and retry
+            await new Promise(r => setTimeout(r, 100));
+            retries++;
+          }
+        }
+
+        // Update progress
+        const pct = ((i + 1) / lines.length) * 100;
+        document.getElementById('stream-bar-fill').style.width = pct + '%';
+        document.getElementById('stream-status').textContent =
+          `Streaming ${i + 1}/${lines.length}...`;
+      }
+
+      // Done
+      isStreaming = false;
+      document.getElementById('btn-stream').disabled = false;
+
+      if (streamAbort) {
+        document.getElementById('stream-status').textContent = '⏹ Aborted';
+        document.getElementById('stream-status').style.color = '#ff4444';
+      } else {
+        document.getElementById('stream-status').textContent = '✓ Fabrication complete!';
+        document.getElementById('stream-status').style.color = 'var(--green)';
+      }
+
+      setTimeout(() => {
+        document.getElementById('btn-estop').classList.remove('visible');
+        document.getElementById('stream-status').style.color = '';
+      }, 5000);
+    }
+
+    async function espEmergencyStop() {
+      streamAbort = true;
+
+      try {
+        await fetch(`http://${espIP}/stop`);
+      } catch(e) {
+        console.error('Emergency stop failed:', e);
+      }
+
+      document.getElementById('stream-status').textContent = '⏹ EMERGENCY STOP sent';
+      document.getElementById('stream-status').style.color = '#ff4444';
     }
 
   </script>

@@ -13,6 +13,15 @@
  */
 
 #include "motion.h"
+#include "laser.h"
+#include <TMCStepper.h>
+
+// ── Hardware Serial for TMC2209 ───────────────────────────────────
+HardwareSerial SerialTMC_X(1);
+HardwareSerial SerialTMC_Y(2);
+
+TMC2209Stepper driverX(&SerialTMC_X, R_SENSE, DRIVER_ADDRESS);
+TMC2209Stepper driverY(&SerialTMC_Y, R_SENSE, DRIVER_ADDRESS);
 
 // ── State ─────────────────────────────────────────────────────────
 static volatile bool stopFlag = false;
@@ -31,10 +40,41 @@ void initMotion() {
     currentY = 0.0;
 
     Serial.println("[motion] GPIO initialized");
-    Serial.printf("[motion] X: STEP=%d DIR=%d\n", X_STEP_PIN, X_DIR_PIN);
-    Serial.printf("[motion] Y: STEP=%d DIR=%d\n", Y_STEP_PIN, Y_DIR_PIN);
-    Serial.printf("[motion] Timing: pulse=%dus delay=%dus\n", PULSE_WIDTH_US, STEP_DELAY_US);
-    Serial.printf("[motion] Resolution: %d steps/mm\n", STEPS_PER_MM);
+    
+    // ── Initialize TMC2209 UART ───────────────────────────────────
+    Serial.println("[motion] Initializing TMC2209 UART drivers...");
+    
+    // ESP32 HardwareSerial allows half-duplex by using the same pin for RX and TX
+    SerialTMC_X.begin(115200, SERIAL_8N1, X_UART_PIN, X_UART_PIN);
+    SerialTMC_Y.begin(115200, SERIAL_8N1, Y_UART_PIN, Y_UART_PIN);
+
+    // Configure X Axis
+    driverX.begin();
+    driverX.toff(5);                     // Enables driver
+    driverX.rms_current(MOTOR_CURRENT_MA);
+    driverX.microsteps(16);
+    driverX.en_spreadCycle(false);       // Enable StealthChop (quiet mode)
+    driverX.pwm_autoscale(true);
+
+    // Configure Y Axis
+    driverY.begin();
+    driverY.toff(5);
+    driverY.rms_current(MOTOR_CURRENT_MA);
+    driverY.microsteps(16);
+    driverY.en_spreadCycle(false);
+    driverY.pwm_autoscale(true);
+
+    // Test connections
+    uint8_t testX = driverX.test_connection();
+    uint8_t testY = driverY.test_connection();
+    
+    if (testX == 0) Serial.printf("[motion] X Driver (GPIO %d): OK\n", X_UART_PIN);
+    else Serial.printf("[motion] X Driver (GPIO %d): ERROR (code %d)\n", X_UART_PIN, testX);
+    
+    if (testY == 0) Serial.printf("[motion] Y Driver (GPIO %d): OK\n", Y_UART_PIN);
+    else Serial.printf("[motion] Y Driver (GPIO %d): ERROR (code %d)\n", Y_UART_PIN, testY);
+
+    Serial.printf("[motion] Current: %dmA, Microsteps: 1/16, StealthChop: ON\n", MOTOR_CURRENT_MA);
 }
 
 void stepMotor(uint8_t stepPin, uint8_t dirPin, int dir, int steps) {
@@ -159,6 +199,9 @@ float getPositionY() {
 
 void setStopFlag(bool flag) {
     stopFlag = flag;
+    if (flag) {
+        turnLaserOff(); // Safety: Immediately kill laser power on emergency stop
+    }
 }
 
 bool getStopFlag() {
