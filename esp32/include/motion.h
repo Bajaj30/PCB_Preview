@@ -23,11 +23,11 @@
 // ── Pin definitions ───────────────────────────────────────────────
 #define X_STEP_PIN  21
 #define X_DIR_PIN   19
-#define X_UART_PIN  16
+#define X_UART_PIN  26
 
 #define Y_STEP_PIN  33
 #define Y_DIR_PIN   32
-#define Y_UART_PIN  17
+#define Y_UART_PIN  27
 
 // ── TMC2209 Configuration ─────────────────────────────────────────
 #define R_SENSE           0.11f   // Standard TMC2209 sense resistor
