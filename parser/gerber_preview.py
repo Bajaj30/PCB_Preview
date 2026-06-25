@@ -16,6 +16,7 @@ Usage:
 from pathlib import Path
 from typing import List
 
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.templating import Jinja2Templates
