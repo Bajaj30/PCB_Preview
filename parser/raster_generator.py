@@ -40,7 +40,39 @@ DEFAULT_SAFETY_GAP = 0.15    # mm extra clearance around copper features
 DEFAULT_LASER_DIAMETER = 0.2 # mm physical laser spot size
 
 
-# ── Geometry Helpers ──────────────────────────────────────────────
+def polygon_interior_x_intervals(vertices, scan_y):
+    """
+    Compute X-intervals where a horizontal scan line at Y = scan_y
+    intersects the interior of a polygon defined by vertices.
+    Using standard ray-casting/scanline intersection.
+    """
+    if len(vertices) < 3:
+        return []
+
+    x_crossings = []
+    n = len(vertices)
+    for i in range(n):
+        x1, y1 = vertices[i]
+        x2, y2 = vertices[(i + 1) % n]
+
+        # Check if the edge crosses the scan line Y = scan_y
+        # To avoid double-counting vertices, we use a half-open interval for Y
+        if (y1 <= scan_y < y2) or (y2 <= scan_y < y1):
+            if abs(y2 - y1) > 1e-12:
+                # Compute X coordinate of intersection
+                t = (scan_y - y1) / (y2 - y1)
+                x_intersect = x1 + t * (x2 - x1)
+                x_crossings.append(x_intersect)
+
+    x_crossings.sort()
+
+    # Pair them up
+    intervals = []
+    for i in range(0, len(x_crossings) - 1, 2):
+        intervals.append((x_crossings[i], x_crossings[i+1]))
+
+    return intervals
+
 
 def capsule_x_intervals(x1, y1, x2, y2, r, scan_y):
     """
@@ -205,6 +237,7 @@ def generate_raster_toolpath(input_path=None, output_path=None,
 
     tracks = data.get('tracks', [])
     pads = data.get('pads', [])
+    regions = data.get('regions', [])
     bounds = data.get('bounds', {})
 
     # ── Normalize coordinates (shift so board min = 0,0) ──
@@ -231,6 +264,14 @@ def generate_raster_toolpath(input_path=None, output_path=None,
             'diameter': p['diameter'],
         })
 
+    norm_regions = []
+    for r in regions:
+        norm_outline = [(pt[0] - offset_x, pt[1] - offset_y) for pt in r['outline']]
+        norm_regions.append({
+            'outline': norm_outline,
+            'polarity': r.get('polarity', True)
+        })
+
     # ── Etch area bounds (board + margin on far side, start at 0,0) ──
     x_min = 0.0
     x_max = board_w + margin
@@ -244,7 +285,7 @@ def generate_raster_toolpath(input_path=None, output_path=None,
     print(f"[raster] Line spacing: {line_spacing} mm")
     print(f"[raster] Scan lines:   {num_scan_lines}")
     print(f"[raster] Safety gap:   {safety_gap} mm")
-    print(f"[raster] Copper:       {len(norm_tracks)} tracks, {len(norm_pads)} pads")
+    print(f"[raster] Copper:       {len(norm_tracks)} tracks, {len(norm_pads)} pads, {len(norm_regions)} regions")
 
     # ── Generate scan line commands ──
     commands = []
@@ -271,6 +312,21 @@ def generate_raster_toolpath(input_path=None, output_path=None,
             iv = circle_x_interval(p['x'], p['y'], r, scan_y)
             if iv:
                 copper_intervals.append(iv)
+
+        for reg in norm_regions:
+            # 1. Add capsule boundary edges with safety_gap/clearance
+            vertices = reg['outline']
+            n = len(vertices)
+            for i in range(n):
+                x1, y1 = vertices[i]
+                x2, y2 = vertices[(i + 1) % n]
+                ivs = capsule_x_intervals(x1, y1, x2, y2, safety_gap, scan_y)
+                copper_intervals.extend(ivs)
+
+            # 2. Add interior intervals if region is copper (dark polarity)
+            if reg['polarity']:
+                ivs = polygon_interior_x_intervals(vertices, scan_y)
+                copper_intervals.extend(ivs)
 
         # Merge overlapping copper zones
         merged_copper = merge_intervals(copper_intervals)

@@ -22,7 +22,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from gerbonara import GerberFile
-    from gerbonara.graphic_objects import Line, Arc, Flash
+    from gerbonara.graphic_objects import Line, Arc, Flash, Region
     from gerbonara.apertures import CircleAperture, RectangleAperture, ObroundAperture
 except ImportError:
     print("ERROR: gerbonara not installed. Run: pip install gerbonara")
@@ -45,10 +45,16 @@ def parse_gerber(gerber_path: str, output_path: str = None):
     # Parse the Gerber file
     gerber = GerberFile.open(gerber_path)
 
+    # Standardize to mm if in inches
+    if getattr(gerber, 'unit', 'mm') == 'in':
+        print(f"[parse_gerber] Converting from inches to mm (scaling by 25.4)...")
+        gerber.scale(25.4)
+
     # Collect all geometry
     tracks = []    # line segments
     pads = []      # flash pads
     arcs = []      # arc segments
+    regions = []   # polygon regions
 
     # Track bounding box for info
     min_x = float('inf')
@@ -149,25 +155,59 @@ def parse_gerber(gerber_path: str, output_path: str = None):
 
             update_bounds(x, y)
 
+        elif isinstance(obj, Region):
+            # A solid filled region
+            # Extract its outline polygons (using to_primitives or outline/iter_segments)
+            try:
+                for primitive in obj.to_primitives():
+                    # Check if the primitive has an outline
+                    if hasattr(primitive, 'outline') and primitive.outline:
+                        poly = {
+                            "outline": [(round(x, 4), round(y, 4)) for x, y in primitive.outline],
+                            "polarity": getattr(primitive, 'polarity_dark', True)
+                        }
+                        regions.append(poly)
+
+                        # Save boundary edges to tracks (lines) for tracing/previewing
+                        vertices = primitive.outline
+                        n = len(vertices)
+                        for i in range(n):
+                            x1, y1 = vertices[i]
+                            x2, y2 = vertices[(i + 1) % n]
+                            tracks.append({
+                                "type": "line",
+                                "x1": round(x1, 4),
+                                "y1": round(y1, 4),
+                                "x2": round(x2, 4),
+                                "y2": round(y2, 4),
+                                "width": 0.05  # thin boundary trace
+                            })
+                            update_bounds(x1, y1)
+                            update_bounds(x2, y2)
+            except Exception as e:
+                print(f"[parse_gerber] Warning: failed to parse region primitive: {e}")
+
     # Build output structure
     result = {
         "source_file": os.path.basename(gerber_path),
         "units": "mm",
         "bounds": {
-            "min_x": round(min_x, 4),
-            "min_y": round(min_y, 4),
-            "max_x": round(max_x, 4),
-            "max_y": round(max_y, 4),
-            "width": round(max_x - min_x, 4),
-            "height": round(max_y - min_y, 4)
+            "min_x": round(min_x, 4) if min_x != float('inf') else 0.0,
+            "min_y": round(min_y, 4) if min_y != float('inf') else 0.0,
+            "max_x": round(max_x, 4) if max_x != float('-inf') else 0.0,
+            "max_y": round(max_y, 4) if max_y != float('-inf') else 0.0,
+            "width": round(max_x - min_x, 4) if min_x != float('inf') else 0.0,
+            "height": round(max_y - min_y, 4) if min_y != float('inf') else 0.0
         },
         "statistics": {
             "total_tracks": len(tracks),
             "total_pads": len(pads),
-            "total_arcs": len(arcs)
+            "total_arcs": len(arcs),
+            "total_regions": len(regions)
         },
         "tracks": tracks,
-        "pads": pads
+        "pads": pads,
+        "regions": regions
     }
 
     # Ensure output directory exists

@@ -712,15 +712,18 @@
     /* ── Head Pointer Overlay ── */
     .pointer-overlay {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
       z-index: 20;
     }
 
     .head-pointer {
       position: absolute;
-      width: 16px; height: 16px;
+      width: 16px;
+      height: 16px;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 21;
@@ -734,23 +737,29 @@
     }
 
     .head-pointer::before {
-      width: 1px; height: 100%;
-      left: 50%; top: 0;
+      width: 1px;
+      height: 100%;
+      left: 50%;
+      top: 0;
       transform: translateX(-50%);
     }
 
     .head-pointer::after {
-      width: 100%; height: 1px;
-      top: 50%; left: 0;
+      width: 100%;
+      height: 1px;
+      top: 50%;
+      left: 0;
       transform: translateY(-50%);
     }
 
     .head-pointer .dot {
       position: absolute;
-      width: 3px; height: 3px;
+      width: 3px;
+      height: 3px;
       background: #ff2222;
       border-radius: 50%;
-      top: 50%; left: 50%;
+      top: 50%;
+      left: 50%;
       transform: translate(-50%, -50%);
       box-shadow: 0 0 4px #ff2222;
     }
@@ -768,8 +777,10 @@
     /* Trail canvas for draw path */
     .trail-canvas {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
       z-index: 19;
     }
@@ -787,7 +798,9 @@
       margin-top: 12px;
     }
 
-    .control-panel.hidden { display: none; }
+    .control-panel.hidden {
+      display: none;
+    }
 
     /* Position readout */
     .position-readout {
@@ -836,7 +849,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border);
       border-radius: 6px;
       color: var(--text);
@@ -847,9 +860,19 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    .dpad-btn:hover { background: rgba(255,255,255,0.08); }
-    .dpad-btn:active { transform: scale(0.9); background: rgba(0, 212, 255, 0.15); }
-    .dpad-btn.center { font-size: 9px; color: var(--muted); }
+    .dpad-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .dpad-btn:active {
+      transform: scale(0.9);
+      background: rgba(0, 212, 255, 0.15);
+    }
+
+    .dpad-btn.center {
+      font-size: 9px;
+      color: var(--muted);
+    }
 
     .step-select {
       background: var(--bg);
@@ -875,25 +898,48 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 36px; height: 36px;
+      width: 36px;
+      height: 36px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       color: var(--text);
       font-size: 16px;
       cursor: pointer;
       transition: all 0.15s;
     }
 
-    .run-btn:hover { background: rgba(255,255,255,0.08); }
+    .run-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
 
-    .run-btn.play { border-color: var(--green); color: var(--green); }
-    .run-btn.play:hover { background: rgba(0,255,136,0.12); }
-    .run-btn.pause { border-color: #ffaa00; color: #ffaa00; }
-    .run-btn.stop { border-color: #ff4444; color: #ff4444; }
-    .run-btn.stop:hover { background: rgba(255,68,68,0.12); }
+    .run-btn.play {
+      border-color: var(--green);
+      color: var(--green);
+    }
 
-    .run-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .run-btn.play:hover {
+      background: rgba(0, 255, 136, 0.12);
+    }
+
+    .run-btn.pause {
+      border-color: #ffaa00;
+      color: #ffaa00;
+    }
+
+    .run-btn.stop {
+      border-color: #ff4444;
+      color: #ff4444;
+    }
+
+    .run-btn.stop:hover {
+      background: rgba(255, 68, 68, 0.12);
+    }
+
+    .run-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
     /* Progress bar for run mode */
     .run-progress {
@@ -905,7 +951,9 @@
       display: none;
     }
 
-    .run-progress.visible { display: block; }
+    .run-progress.visible {
+      display: block;
+    }
 
     .run-progress-fill {
       height: 100%;
@@ -923,7 +971,9 @@
       display: none;
     }
 
-    .run-status.visible { display: block; }
+    .run-status.visible {
+      display: block;
+    }
 
     /* ── ESP32 Machine Controls ── */
     .esp-section {
@@ -965,7 +1015,10 @@
       white-space: nowrap;
     }
 
-    .btn-connect:hover { background: rgba(0, 212, 255, 0.2); }
+    .btn-connect:hover {
+      background: rgba(0, 212, 255, 0.2);
+    }
+
     .btn-connect.connected {
       background: rgba(0, 255, 136, 0.1);
       border-color: var(--green);
@@ -982,7 +1035,8 @@
     }
 
     .esp-status .dot-indicator {
-      width: 6px; height: 6px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: #ff4444;
     }
@@ -1006,7 +1060,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border);
       border-radius: 6px;
       color: var(--text);
@@ -1016,10 +1070,24 @@
       user-select: none;
     }
 
-    .esp-dpad-btn:hover { background: rgba(255,255,255,0.08); }
-    .esp-dpad-btn:active { transform: scale(0.9); background: rgba(0, 212, 255, 0.15); }
-    .esp-dpad-btn.home-btn { font-size: 12px; color: var(--muted); }
-    .esp-dpad-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .esp-dpad-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .esp-dpad-btn:active {
+      transform: scale(0.9);
+      background: rgba(0, 212, 255, 0.15);
+    }
+
+    .esp-dpad-btn.home-btn {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .esp-dpad-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
     /* ESP32 Laser controls */
     .laser-control {
@@ -1058,7 +1126,10 @@
       color: #fff;
     }
 
-    .btn-fire:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-fire:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
     /* Streaming progress */
     .stream-progress {
@@ -1066,7 +1137,9 @@
       display: none;
     }
 
-    .stream-progress.visible { display: block; }
+    .stream-progress.visible {
+      display: block;
+    }
 
     .stream-bar {
       height: 4px;
@@ -1103,8 +1176,14 @@
       margin-top: 6px;
     }
 
-    .btn-stream:hover { background: rgba(0, 255, 136, 0.15); }
-    .btn-stream:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-stream:hover {
+      background: rgba(0, 255, 136, 0.15);
+    }
+
+    .btn-stream:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
 
     .btn-estop {
       width: 100%;
@@ -1121,8 +1200,13 @@
       display: none;
     }
 
-    .btn-estop:hover { background: rgba(255, 68, 68, 0.2); }
-    .btn-estop.visible { display: block; }
+    .btn-estop:hover {
+      background: rgba(255, 68, 68, 0.2);
+    }
+
+    .btn-estop.visible {
+      display: block;
+    }
 
     .esp-pos {
       font-size: 10px;
@@ -1152,7 +1236,7 @@
 
   <header>
     <div class="logo">⚡</div>
-    <h1>ANTIGRAVITY <span class="subtitle">PCB Layer Preview</span></h1>
+    <h1>PCB Layer Preview <span class="subtitle"></span></h1>
     <div class="status-dot"></div>
   </header>
 
@@ -1228,14 +1312,16 @@
 
         <div style="margin-bottom:10px;">
           <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Mode</label>
-          <select class="step-select" id="gcode-mode" style="width:100%;margin-top:4px;" onchange="toggleRasterOptions()">
+          <select class="step-select" id="gcode-mode" style="width:100%;margin-top:4px;"
+            onchange="toggleRasterOptions()">
             <option value="trace">🔧 Vector Trace — trace copper paths</option>
             <option value="raster">▓ Raster Etch — etch around copper</option>
           </select>
         </div>
 
         <div id="raster-options" style="display:none;margin-bottom:10px;">
-          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Line Spacing</label>
+          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Line
+            Spacing</label>
           <select class="step-select" id="gcode-line-spacing" style="width:100%;margin-top:4px;">
             <option value="0.05">0.05 mm — Ultra fine (slow)</option>
             <option value="0.1" selected>0.10 mm — Fine (default)</option>
@@ -1246,7 +1332,9 @@
             <option value="1.5">1.50 mm — Extra wide</option>
             <option value="2.0">2.00 mm — Maximum (fast)</option>
           </select>
-          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:8px;display:block;">Laser Spot Size</label>
+          <label
+            style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:8px;display:block;">Laser
+            Spot Size</label>
           <select class="step-select" id="gcode-laser-diameter" style="width:100%;margin-top:4px;">
             <option value="0.1">0.10 mm</option>
             <option value="0.15">0.15 mm</option>
@@ -1257,7 +1345,8 @@
         </div>
 
         <div style="margin-bottom:10px;">
-          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Output Scale</label>
+          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Output
+            Scale</label>
           <select class="step-select" id="gcode-scale" style="width:100%;margin-top:4px;">
             <option value="1">×1 — Original (1:1)</option>
             <option value="2">×2 — Double</option>
@@ -1267,9 +1356,8 @@
           </select>
         </div>
 
-        <button class="btn-generate" id="btn-generate"
-          onclick="convertGCode()"
-          {% if not files %}disabled title="Upload Gerber files first"{% endif %}>
+        <button class="btn-generate" id="btn-generate" onclick="convertGCode()" {% if not files %}disabled
+          title="Upload Gerber files first" {% endif %}>
           ⚙ Generate G-code
         </button>
 
@@ -1298,7 +1386,8 @@
 
         <!-- Live position -->
         <div class="esp-pos" id="esp-pos" style="display:none;">
-          Machine: X <span class="coord-val" id="esp-x">0.00</span> &nbsp; Y <span class="coord-val" id="esp-y">0.00</span> mm
+          Machine: X <span class="coord-val" id="esp-x">0.00</span> &nbsp; Y <span class="coord-val"
+            id="esp-y">0.00</span> mm
         </div>
 
         <!-- D-pad Jog (sends to ESP32) -->
@@ -2061,16 +2150,16 @@
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
       switch (e.key) {
-        case 'ArrowUp':    e.preventDefault(); jogHead(0, 1); break;
-        case 'ArrowDown':  e.preventDefault(); jogHead(0, -1); break;
-        case 'ArrowLeft':  e.preventDefault(); jogHead(-1, 0); break;
+        case 'ArrowUp': e.preventDefault(); jogHead(0, 1); break;
+        case 'ArrowDown': e.preventDefault(); jogHead(0, -1); break;
+        case 'ArrowLeft': e.preventDefault(); jogHead(-1, 0); break;
         case 'ArrowRight': e.preventDefault(); jogHead(1, 0); break;
-        case 'Home':       e.preventDefault(); homeHead(); break;
-        case ' ':          e.preventDefault();
+        case 'Home': e.preventDefault(); homeHead(); break;
+        case ' ': e.preventDefault();
           if (isRunning) pauseGCode();
           else runGCode();
           break;
-        case 'Escape':     stopGCode(); break;
+        case 'Escape': stopGCode(); break;
       }
     });
 
@@ -2286,7 +2375,7 @@
           document.getElementById('esp-x').textContent = data.x;
           document.getElementById('esp-y').textContent = data.y;
         })
-        .catch(() => {});
+        .catch(() => { });
     }
 
     async function espJog(axis, dir) {
@@ -2300,7 +2389,7 @@
         });
         // Refresh position after jog
         setTimeout(espPollStatus, 100);
-      } catch(e) {
+      } catch (e) {
         console.error('Jog failed:', e);
       }
     }
@@ -2315,13 +2404,13 @@
           body: 'line=G28'
         });
         setTimeout(espPollStatus, 500);
-      } catch(e) {
+      } catch (e) {
         console.error('Home failed:', e);
       }
     }
 
     // Laser power slider live update
-    document.getElementById('esp-laser-pwr').addEventListener('input', function() {
+    document.getElementById('esp-laser-pwr').addEventListener('input', function () {
       const pct = Math.round((this.value / 1000) * 100);
       document.getElementById('esp-laser-pwr-label').textContent = pct + '%';
     });
@@ -2345,7 +2434,7 @@
           btn.classList.add('active');
           btn.textContent = 'OFF';
         }
-      } catch(e) {
+      } catch (e) {
         console.error('Laser toggle failed:', e);
       }
     }
@@ -2364,7 +2453,7 @@
           return;
         }
         gcodeText = await res.text();
-      } catch(e) {
+      } catch (e) {
         alert('Failed to load G-code: ' + e.message);
         return;
       }
@@ -2416,7 +2505,7 @@
               console.error(`ESP32 returned ${res.status} for line: ${line}`);
               sent = true;  // Skip this line
             }
-          } catch(e) {
+          } catch (e) {
             // Network error — wait and retry
             await new Promise(r => setTimeout(r, 100));
             retries++;
@@ -2453,7 +2542,7 @@
 
       try {
         await fetch(`http://${espIP}/stop`);
-      } catch(e) {
+      } catch (e) {
         console.error('Emergency stop failed:', e);
       }
 
