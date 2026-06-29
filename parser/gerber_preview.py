@@ -24,6 +24,104 @@ from gerbonara import GerberFile
 import json as _json
 
 import sys
+import threading
+import time
+import serial
+import serial.tools.list_ports
+
+# ── Serial Manager ─────────────────────────────────────────────────
+class SerialManager:
+    def __init__(self):
+        self.serial_port = None
+        self.streaming = False
+        self.abort_flag = False
+        self.stream_thread = None
+        self.total_lines = 0
+        self.sent_lines = 0
+        self.machine_pos = {"x": "0.00", "y": "0.00"}
+
+    def connect(self, port: str, baud: int = 115200):
+        if self.serial_port and self.serial_port.is_open:
+            self.disconnect()
+        self.serial_port = serial.Serial(port, baud, timeout=2)
+        time.sleep(2)  # Wait for GRBL to initialize
+        self.serial_port.write(b"\r\n\r\n")
+        time.sleep(1)
+        # Drain all startup text from GRBL
+        while self.serial_port.in_waiting:
+            self.serial_port.readline()
+        self.serial_port.reset_input_buffer()
+        # Unlock GRBL (clears alarm state)
+        self.serial_port.write(b"$X\n")
+        time.sleep(0.5)
+        while self.serial_port.in_waiting:
+            self.serial_port.readline()
+
+    def disconnect(self):
+        self.abort_flag = True
+        if self.serial_port and self.serial_port.is_open:
+            self.serial_port.close()
+            self.serial_port = None
+
+    def send_command(self, cmd: str) -> str:
+        if not self.serial_port or not self.serial_port.is_open:
+            raise Exception("Serial port not connected")
+        # Drain any pending data first
+        while self.serial_port.in_waiting:
+            self.serial_port.readline()
+        
+        # Support multi-line commands (split on \n)
+        lines = [l.strip() for l in cmd.strip().split('\n') if l.strip()]
+        all_responses = []
+        
+        for line in lines:
+            self.serial_port.write((line + "\n").encode())
+            # Read responses until we get 'ok' or 'error' or timeout
+            while True:
+                resp = self.serial_port.readline().decode().strip()
+                if not resp:
+                    break  # timeout
+                all_responses.append(resp)
+                if resp == 'ok' or resp.startswith('error'):
+                    break
+        
+        return "; ".join(all_responses) if all_responses else "no response"
+
+    def _stream_task(self, lines: list[str]):
+        self.total_lines = len(lines)
+        self.sent_lines = 0
+        self.streaming = True
+        self.abort_flag = False
+
+        for line in lines:
+            if self.abort_flag:
+                # Send feed hold
+                if self.serial_port and self.serial_port.is_open:
+                    self.serial_port.write(b"!")
+                break
+            line = line.strip()
+            if not line or line.startswith(';'):
+                self.sent_lines += 1
+                continue
+            
+            # Send and wait for 'ok'
+            if self.serial_port and self.serial_port.is_open:
+                self.serial_port.write((line + "\n").encode())
+                while True:
+                    resp = self.serial_port.readline().decode().strip()
+                    if resp == 'ok' or resp.startswith('error'):
+                        break
+            self.sent_lines += 1
+
+        self.streaming = False
+
+    def start_stream(self, lines: list[str]):
+        if self.streaming:
+            raise Exception("Already streaming")
+        self.stream_thread = threading.Thread(target=self._stream_task, args=(lines,))
+        self.stream_thread.start()
+
+serial_mgr = SerialManager()
 
 # ── Paths ──────────────────────────────────────────────────────────
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
@@ -586,6 +684,74 @@ async def download_gcode():
         filename="output.gcode",
         media_type="text/plain",
     )
+
+
+# ── Serial USB API ───────────────────────────────────────────────────
+
+from pydantic import BaseModel
+class SerialConnectRequest(BaseModel):
+    port: str
+    baud: int = 115200
+
+class SerialCommandRequest(BaseModel):
+    command: str
+
+@app.get("/api/serial/ports")
+async def get_serial_ports():
+    ports = [port.device for port in serial.tools.list_ports.comports()]
+    return {"ports": ports}
+
+@app.post("/api/serial/connect")
+async def connect_serial(req: SerialConnectRequest):
+    try:
+        serial_mgr.connect(req.port, req.baud)
+        return {"success": True, "message": f"Connected to {req.port}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/serial/disconnect")
+async def disconnect_serial():
+    serial_mgr.disconnect()
+    return {"success": True}
+
+@app.post("/api/serial/send")
+async def send_serial_cmd(req: SerialCommandRequest):
+    try:
+        response = serial_mgr.send_command(req.command)
+        return {"success": True, "response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/serial/stream")
+async def stream_gcode():
+    gcode_path = OUTPUT_DIR / "output.gcode"
+    if not gcode_path.exists():
+        raise HTTPException(status_code=404, detail="No G-code file found.")
+    
+    with open(gcode_path, 'r') as f:
+        lines = f.readlines()
+        
+    try:
+        serial_mgr.start_stream(lines)
+        return {"success": True, "total_lines": len(lines)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/serial/status")
+async def get_serial_status():
+    # If not streaming but connected, we can poll position via '?' command if desired
+    # For now, just return streaming stats
+    return {
+        "connected": serial_mgr.serial_port is not None and serial_mgr.serial_port.is_open,
+        "streaming": serial_mgr.streaming,
+        "total_lines": serial_mgr.total_lines,
+        "sent_lines": serial_mgr.sent_lines
+    }
+
+@app.post("/api/serial/stop")
+async def stop_serial_stream():
+    serial_mgr.abort_flag = True
+    return {"success": True}
 
 
 def main():
