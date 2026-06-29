@@ -696,6 +696,8 @@ class SerialConnectRequest(BaseModel):
 class SerialCommandRequest(BaseModel):
     command: str
 
+import asyncio
+
 @app.get("/api/serial/ports")
 async def get_serial_ports():
     ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -704,7 +706,7 @@ async def get_serial_ports():
 @app.post("/api/serial/connect")
 async def connect_serial(req: SerialConnectRequest):
     try:
-        serial_mgr.connect(req.port, req.baud)
+        await asyncio.to_thread(serial_mgr.connect, req.port, req.baud)
         return {"success": True, "message": f"Connected to {req.port}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -717,7 +719,7 @@ async def disconnect_serial():
 @app.post("/api/serial/send")
 async def send_serial_cmd(req: SerialCommandRequest):
     try:
-        response = serial_mgr.send_command(req.command)
+        response = await asyncio.to_thread(serial_mgr.send_command, req.command)
         return {"success": True, "response": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -739,8 +741,6 @@ async def stream_gcode():
 
 @app.get("/api/serial/status")
 async def get_serial_status():
-    # If not streaming but connected, we can poll position via '?' command if desired
-    # For now, just return streaming stats
     return {
         "connected": serial_mgr.serial_port is not None and serial_mgr.serial_port.is_open,
         "streaming": serial_mgr.streaming,
