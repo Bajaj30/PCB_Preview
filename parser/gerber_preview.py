@@ -39,6 +39,7 @@ class SerialManager:
         self.total_lines = 0
         self.sent_lines = 0
         self.machine_pos = {"x": "0.00", "y": "0.00"}
+        self._sse_queues: set = set()  # SSE subscriber queues for live preview sync
 
     def connect(self, port: str, baud: int = 115200):
         if self.serial_port and self.serial_port.is_open:
@@ -154,6 +155,8 @@ class SerialManager:
                 if self.serial_port and self.serial_port.is_open:
                     self.serial_port.write(b"!")
                 print("[SERIAL] Stream ABORTED by user")
+                # Push abort event to SSE subscribers
+                self._push_event({"type": "abort", "sent": self.sent_lines, "total": self.total_lines})
                 break
             line = line.strip()
             if not line or line.startswith(';'):
@@ -177,10 +180,43 @@ class SerialManager:
                     if not resp:
                         print(f"[SERIAL] Stream timeout on line {self.sent_lines} (cmd: {line})")
                         break
+
             self.sent_lines += 1
+            # Push progress event to SSE subscribers
+            self._push_event({
+                "type": "line",
+                "line": line,
+                "sent": self.sent_lines,
+                "total": self.total_lines
+            })
 
         self.streaming = False
         print(f"[SERIAL] Stream complete: {self.sent_lines}/{self.total_lines} lines sent")
+        # Push done event
+        self._push_event({"type": "done", "sent": self.sent_lines, "total": self.total_lines})
+
+    def _push_event(self, data: dict):
+        """Push an event to all active SSE subscriber queues."""
+        import json
+        dead = []
+        for q in self._sse_queues:
+            try:
+                q.put_nowait(json.dumps(data))
+            except Exception:
+                dead.append(q)
+        for q in dead:
+            self._sse_queues.discard(q)
+
+    def subscribe_sse(self):
+        """Register a new SSE subscriber queue. Returns the queue."""
+        import queue
+        q = queue.Queue(maxsize=500)
+        self._sse_queues.add(q)
+        return q
+
+    def unsubscribe_sse(self, q):
+        """Remove an SSE subscriber queue."""
+        self._sse_queues.discard(q)
 
     def start_stream(self, lines: list[str]):
         if self.streaming:
@@ -819,6 +855,50 @@ async def get_serial_status():
 async def stop_serial_stream():
     serial_mgr.abort_flag = True
     return {"success": True}
+
+@app.get("/api/serial/stream-events")
+async def stream_events():
+    """
+    Server-Sent Events endpoint.
+    The browser subscribes here and receives a JSON event for every G-code
+    line sent to the Arduino — enabling real-time preview sync.
+
+    Event format:
+      data: {"type": "line", "line": "G1 X23.45 Y14.32 F1000", "sent": 42, "total": 300}
+      data: {"type": "done", "sent": 300, "total": 300}
+      data: {"type": "abort", "sent": 42, "total": 300}
+    """
+    import queue as q_module
+    from fastapi.responses import StreamingResponse
+
+    subscriber_queue = serial_mgr.subscribe_sse()
+
+    async def event_generator():
+        try:
+            while True:
+                # Poll the thread-safe queue in a non-blocking async way
+                try:
+                    data = await asyncio.to_thread(subscriber_queue.get, True, 30)
+                    yield f"data: {data}\n\n"
+                    # If the stream finished or aborted, stop the SSE stream
+                    import json
+                    parsed = json.loads(data)
+                    if parsed.get("type") in ("done", "abort"):
+                        break
+                except q_module.Empty:
+                    # Keepalive ping so the browser connection stays open
+                    yield ": keepalive\n\n"
+        finally:
+            serial_mgr.unsubscribe_sse(subscriber_queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # disables nginx buffering
+        }
+    )
 
 
 def main():

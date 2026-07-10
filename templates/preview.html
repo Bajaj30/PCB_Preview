@@ -2569,16 +2569,28 @@
       }
     }
 
+    // Active SSE connection (so we can close it on stop/abort)
+    let _streamEventSource = null;
+
     async function machineStreamGCode() {
       if (connMode === 'usb') {
         if (!usbConnected || isStreaming) return;
         isStreaming = true;
+
+        // Reset preview state for a fresh run
+        clearTrail();
+        initTrailCanvas();
+        moveHead(0, 0, false);
+
+        // Update UI
         document.getElementById('btn-stream').disabled = true;
         document.getElementById('btn-estop').classList.add('visible');
         document.getElementById('stream-progress').classList.add('visible');
         document.getElementById('stream-status').textContent = 'Starting stream...';
         document.getElementById('stream-bar-fill').style.width = '0%';
-        
+        setMode('run');
+
+        // ── 1. Tell backend to start streaming to the Arduino ──
         try {
           const res = await fetch('/api/serial/stream', { method: 'POST' });
           if (!res.ok) throw new Error(await res.text());
@@ -2586,18 +2598,96 @@
           alert("Stream failed to start: " + e.message);
           isStreaming = false;
           document.getElementById('btn-stream').disabled = false;
+          setMode('jog');
+          return;
         }
+
+        // ── 2. Subscribe to SSE for real-time preview sync ──
+        if (_streamEventSource) {
+          _streamEventSource.close();
+        }
+        _streamEventSource = new EventSource('/api/serial/stream-events');
+
+        // Regex to parse X and Y from a G-code line, e.g. "G1 X23.450 Y14.320 F1000"
+        const coordRe = /X([-\d.]+)/i;
+        const coordReY = /Y([-\d.]+)/i;
+        let laserOn = false;  // track M3/M5 state for trail color
+
+        _streamEventSource.onmessage = (event) => {
+          let data;
+          try { data = JSON.parse(event.data); } catch { return; }
+
+          if (data.type === 'line') {
+            const line = data.line || '';
+            const sent = data.sent || 0;
+            const total = data.total || 1;
+
+            // ── Track laser state ──
+            if (/^M3\b/i.test(line)) laserOn = true;
+            if (/^M5\b/i.test(line)) laserOn = false;
+
+            // ── Parse coordinates and move head ──
+            const mX = coordRe.exec(line);
+            const mY = coordReY.exec(line);
+            if (mX || mY) {
+              const isDrawMove = /^G1\b/i.test(line) && laserOn;
+              const isRapid   = /^G0\b/i.test(line);
+              const gx = mX ? parseFloat(mX[1]) : headX;  // keep current if axis not in line
+              const gy = mY ? parseFloat(mY[1]) : headY;
+              const bed = gcodeToBed(gx, gy);
+              moveHead(bed.x, bed.y, isDrawMove);
+            }
+
+            // ── Update progress bar ──
+            const pct = (sent / total) * 100;
+            document.getElementById('stream-bar-fill').style.width = pct + '%';
+            document.getElementById('stream-status').textContent =
+              `Streaming… ${sent}/${total} lines` + (laserOn ? ' 🔴' : '');
+
+          } else if (data.type === 'done') {
+            _onStreamComplete(false);
+          } else if (data.type === 'abort') {
+            _onStreamComplete(true);
+          }
+        };
+
+        _streamEventSource.onerror = () => {
+          // SSE connection closed (server done or disconnected)
+          _onStreamComplete(false);
+        };
+
       } else {
         await espStreamGCode();
       }
     }
 
+    function _onStreamComplete(aborted) {
+      if (_streamEventSource) {
+        _streamEventSource.close();
+        _streamEventSource = null;
+      }
+      isStreaming = false;
+      setMode('jog');
+      document.getElementById('btn-stream').disabled = false;
+      document.getElementById('btn-estop').classList.remove('visible');
+      document.getElementById('stream-status').textContent = aborted
+        ? '⏹ Stream aborted'
+        : '✅ Stream complete';
+      document.getElementById('stream-status').style.color = aborted ? '#ff4444' : 'var(--green)';
+      setTimeout(() => {
+        document.getElementById('stream-status').style.color = '';
+      }, 4000);
+    }
+
     async function machineEmergencyStop() {
       if (connMode === 'usb') {
         await fetch('/api/serial/stop', { method: 'POST' });
-        isStreaming = false;
-        document.getElementById('stream-status').textContent = '⏹ EMERGENCY STOP sent';
-        document.getElementById('stream-status').style.color = '#ff4444';
+        // Close SSE — the backend abort event will also fire, but closing here is faster
+        if (_streamEventSource) {
+          _streamEventSource.close();
+          _streamEventSource = null;
+        }
+        _onStreamComplete(true);
       } else {
         await espEmergencyStop();
       }
