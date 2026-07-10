@@ -39,81 +39,184 @@ class SerialManager:
         self.total_lines = 0
         self.sent_lines = 0
         self.machine_pos = {"x": "0.00", "y": "0.00"}
+        self._sse_queues: set = set()  # SSE subscriber queues for live preview sync
 
     def connect(self, port: str, baud: int = 115200):
         if self.serial_port and self.serial_port.is_open:
             self.disconnect()
         self.serial_port = serial.Serial(port, baud, timeout=2)
-        time.sleep(2)  # Wait for GRBL to initialize
+        time.sleep(2)  # Wait for GRBL to initialize after DTR reset
+        # Wake up GRBL with empty lines
         self.serial_port.write(b"\r\n\r\n")
         time.sleep(1)
-        # Drain all startup text from GRBL
+        # Drain all startup text from GRBL (e.g. "Grbl 1.1h ['$' for help]")
+        startup_msgs = []
         while self.serial_port.in_waiting:
-            self.serial_port.readline()
+            line = self.serial_port.readline().decode(errors='replace').strip()
+            if line:
+                startup_msgs.append(line)
+        print(f"[SERIAL] Connected to {port} @ {baud}")
+        for msg in startup_msgs:
+            print(f"[SERIAL] Startup: {msg}")
         self.serial_port.reset_input_buffer()
-        # Unlock GRBL (clears alarm state)
+
+        # Auto-unlock: Send $X to clear alarm state on initial connection.
+        # GRBL boots into Alarm mode and won't accept motion commands until unlocked.
+        # NOTE: After a $H homing cycle, GRBL may re-enter alarm if limits are hit;
+        # that's handled separately — this $X only runs once on connect.
+        print("[SERIAL] Sending $X to unlock GRBL...")
         self.serial_port.write(b"$X\n")
         time.sleep(0.5)
         while self.serial_port.in_waiting:
-            self.serial_port.readline()
+            line = self.serial_port.readline().decode(errors='replace').strip()
+            if line:
+                print(f"[SERIAL] $X response: {line}")
 
     def disconnect(self):
         self.abort_flag = True
         if self.serial_port and self.serial_port.is_open:
-            self.serial_port.close()
+            try:
+                self.serial_port.close()
+            except Exception:
+                pass
             self.serial_port = None
+        print("[SERIAL] Disconnected")
 
     def send_command(self, cmd: str) -> str:
         if not self.serial_port or not self.serial_port.is_open:
             raise Exception("Serial port not connected")
-        # Drain any pending data first
+
+        # Drain any stale data in the buffer first
+        drained = 0
         while self.serial_port.in_waiting:
             self.serial_port.readline()
-        
+            drained += 1
+        if drained:
+            print(f"[SERIAL] Drained {drained} stale line(s) before sending")
+
         # Support multi-line commands (split on \n)
+        # e.g. "G91\nG1 X0.125 F500\nG90" → 3 separate lines
         lines = [l.strip() for l in cmd.strip().split('\n') if l.strip()]
         all_responses = []
-        
+
         for line in lines:
-            self.serial_port.write((line + "\n").encode())
+            # Determine if this is a long-running GRBL command
+            is_homing = line.upper() in ('$H', '$H\r')
+            is_grbl_cmd = line.startswith('$')
+
+            # Temporarily increase timeout for homing ($H takes 10-30s)
+            original_timeout = self.serial_port.timeout
+            if is_homing:
+                self.serial_port.timeout = 30
+                print(f"[SERIAL] >>> {line}  (homing — timeout set to 30s)")
+            else:
+                print(f"[SERIAL] >>> {line}")
+
+            # Send the command with exactly \n (not \r\n)
+            self.serial_port.write((line + "\n").encode('ascii'))
+
             # Read responses until we get 'ok' or 'error' or timeout
             while True:
-                resp = self.serial_port.readline().decode().strip()
+                try:
+                    resp = self.serial_port.readline().decode(errors='replace').strip()
+                except Exception as e:
+                    print(f"[SERIAL] Read error: {e}")
+                    resp = ""
+
                 if not resp:
-                    break  # timeout
+                    print(f"[SERIAL] <<< (timeout, no response)")
+                    break  # timeout — no more data
+                print(f"[SERIAL] <<< {resp}")
                 all_responses.append(resp)
+
+                # For standard G-code, stop on 'ok' or 'error'
                 if resp == 'ok' or resp.startswith('error'):
                     break
-        
-        return "; ".join(all_responses) if all_responses else "no response"
+                # For GRBL $ commands, they may send multi-line data then 'ok'
+                # Keep reading until we hit 'ok'
+
+            # Restore original timeout
+            if is_homing:
+                self.serial_port.timeout = original_timeout
+
+        result = "; ".join(all_responses) if all_responses else "no response"
+        return result
 
     def _stream_task(self, lines: list[str]):
         self.total_lines = len(lines)
         self.sent_lines = 0
         self.streaming = True
         self.abort_flag = False
+        print(f"[SERIAL] Starting G-code stream: {self.total_lines} lines")
 
         for line in lines:
             if self.abort_flag:
-                # Send feed hold
+                # Send feed hold to stop motion immediately
                 if self.serial_port and self.serial_port.is_open:
                     self.serial_port.write(b"!")
+                print("[SERIAL] Stream ABORTED by user")
+                # Push abort event to SSE subscribers
+                self._push_event({"type": "abort", "sent": self.sent_lines, "total": self.total_lines})
                 break
             line = line.strip()
             if not line or line.startswith(';'):
                 self.sent_lines += 1
                 continue
-            
+
             # Send and wait for 'ok'
             if self.serial_port and self.serial_port.is_open:
-                self.serial_port.write((line + "\n").encode())
+                self.serial_port.write((line + "\n").encode('ascii'))
                 while True:
-                    resp = self.serial_port.readline().decode().strip()
-                    if resp == 'ok' or resp.startswith('error'):
+                    try:
+                        resp = self.serial_port.readline().decode(errors='replace').strip()
+                    except Exception as e:
+                        print(f"[SERIAL] Stream read error: {e}")
+                        resp = ""
                         break
+                    if resp == 'ok' or resp.startswith('error'):
+                        if resp.startswith('error'):
+                            print(f"[SERIAL] Stream error on line {self.sent_lines}: {resp} (cmd: {line})")
+                        break
+                    if not resp:
+                        print(f"[SERIAL] Stream timeout on line {self.sent_lines} (cmd: {line})")
+                        break
+
             self.sent_lines += 1
+            # Push progress event to SSE subscribers
+            self._push_event({
+                "type": "line",
+                "line": line,
+                "sent": self.sent_lines,
+                "total": self.total_lines
+            })
 
         self.streaming = False
+        print(f"[SERIAL] Stream complete: {self.sent_lines}/{self.total_lines} lines sent")
+        # Push done event
+        self._push_event({"type": "done", "sent": self.sent_lines, "total": self.total_lines})
+
+    def _push_event(self, data: dict):
+        """Push an event to all active SSE subscriber queues."""
+        import json
+        dead = []
+        for q in self._sse_queues:
+            try:
+                q.put_nowait(json.dumps(data))
+            except Exception:
+                dead.append(q)
+        for q in dead:
+            self._sse_queues.discard(q)
+
+    def subscribe_sse(self):
+        """Register a new SSE subscriber queue. Returns the queue."""
+        import queue
+        q = queue.Queue(maxsize=500)
+        self._sse_queues.add(q)
+        return q
+
+    def unsubscribe_sse(self, q):
+        """Remove an SSE subscriber queue."""
+        self._sse_queues.discard(q)
 
     def start_stream(self, lines: list[str]):
         if self.streaming:
@@ -752,6 +855,50 @@ async def get_serial_status():
 async def stop_serial_stream():
     serial_mgr.abort_flag = True
     return {"success": True}
+
+@app.get("/api/serial/stream-events")
+async def stream_events():
+    """
+    Server-Sent Events endpoint.
+    The browser subscribes here and receives a JSON event for every G-code
+    line sent to the Arduino — enabling real-time preview sync.
+
+    Event format:
+      data: {"type": "line", "line": "G1 X23.45 Y14.32 F1000", "sent": 42, "total": 300}
+      data: {"type": "done", "sent": 300, "total": 300}
+      data: {"type": "abort", "sent": 42, "total": 300}
+    """
+    import queue as q_module
+    from fastapi.responses import StreamingResponse
+
+    subscriber_queue = serial_mgr.subscribe_sse()
+
+    async def event_generator():
+        try:
+            while True:
+                # Poll the thread-safe queue in a non-blocking async way
+                try:
+                    data = await asyncio.to_thread(subscriber_queue.get, True, 30)
+                    yield f"data: {data}\n\n"
+                    # If the stream finished or aborted, stop the SSE stream
+                    import json
+                    parsed = json.loads(data)
+                    if parsed.get("type") in ("done", "abort"):
+                        break
+                except q_module.Empty:
+                    # Keepalive ping so the browser connection stays open
+                    yield ": keepalive\n\n"
+        finally:
+            serial_mgr.unsubscribe_sse(subscriber_queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # disables nginx buffering
+        }
+    )
 
 
 def main():
