@@ -2470,19 +2470,43 @@
     async function usbPollStatus() {
       if (!usbConnected) return;
       try {
+        // ── 1. Check connection/streaming status ──
         const res = await fetch('/api/serial/status');
         const data = await res.json();
         if (!data.connected) {
           usbConnected = false;
+          clearInterval(statusPollTimer);
+          statusPollTimer = null;
           updateConnModeUI();
           document.getElementById('btn-usb-connect').textContent = 'Connect';
           document.getElementById('btn-usb-connect').classList.remove('connected');
-        } else if (data.streaming && isStreaming) {
-           const pct = data.total_lines > 0 ? (data.sent_lines / data.total_lines) * 100 : 0;
-           document.getElementById('stream-bar-fill').style.width = pct + '%';
-           document.getElementById('stream-status').textContent = `Streaming ${data.sent_lines}/${data.total_lines}...`;
+          return;
         }
-      } catch (e) { }
+
+        // ── 2. Poll real machine position from GRBL via '?' command ──
+        // Skip during active streaming to avoid interfering with G-code flow
+        if (!data.streaming) {
+          try {
+            const posRes = await fetch('/api/serial/position');
+            if (posRes.ok) {
+              const pos = await posRes.json();
+              document.getElementById('esp-x').textContent = pos.x.toFixed(3);
+              document.getElementById('esp-y').textContent = pos.y.toFixed(3);
+              // Also update the visual head pointer in the preview
+              const bed = gcodeToBed(pos.x, pos.y);
+              moveHead(bed.x, bed.y, false);
+            }
+          } catch (_) { /* silent — position polling is best-effort */ }
+        }
+
+        // ── 3. Update streaming progress bar (SSE handles this too, belt+braces) ──
+        if (data.streaming && isStreaming) {
+          const pct = data.total_lines > 0 ? (data.sent_lines / data.total_lines) * 100 : 0;
+          document.getElementById('stream-bar-fill').style.width = pct + '%';
+          document.getElementById('stream-status').textContent =
+            `Streaming ${data.sent_lines}/${data.total_lines}...`;
+        }
+      } catch (e) { /* network error — silently ignore */ }
     }
 
     function enableMachineControls() {
