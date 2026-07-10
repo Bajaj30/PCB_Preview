@@ -1356,23 +1356,19 @@
           </select>
         </div>
 
-<<<<<<< HEAD
         <div style="margin-bottom:10px;">
-          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Board Orientation</label>
-          <select class="step-select" id="gcode-orientation" style="width:100%;margin-top:4px;" onchange="applyPreviewOrientation()">
+          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Board
+            Orientation</label>
+          <select class="step-select" id="gcode-orientation" style="width:100%;margin-top:4px;"
+            onchange="applyPreviewOrientation()">
             <option value="normal">Normal</option>
             <option value="rot90">&#x21BB; Rotate 90&deg; CCW</option>
             <option value="rot180">&#x21BA; Rotate 180&deg;</option>
             <option value="rot270">&#x21BA; Rotate 270&deg; CCW</option>
           </select>
         </div>
-        <button class="btn-generate" id="btn-generate"
-          onclick="convertGCode()"
-          {% if not files %}disabled title="Upload Gerber files first"{% endif %}>
-=======
         <button class="btn-generate" id="btn-generate" onclick="convertGCode()" {% if not files %}disabled
           title="Upload Gerber files first" {% endif %}>
->>>>>>> upstream/main
           ⚙ Generate G-code
         </button>
 
@@ -1389,11 +1385,28 @@
       <h2>⚡ Machine Control</h2>
       <div class="esp-section">
 
+        <!-- Connection Mode -->
+        <div style="margin-bottom: 10px;">
+          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Connection Mode</label>
+          <select class="step-select" id="conn-mode" style="width:100%;margin-top:4px;" onchange="updateConnModeUI()">
+            <option value="usb">Direct USB (Laptop → Arduino)</option>
+            <option value="esp">WiFi (ESP32 Bridge)</option>
+          </select>
+        </div>
+
         <!-- Connection -->
-        <div class="esp-connect-row">
+        <div class="esp-connect-row" id="ui-usb" style="display:flex;">
+          <select id="usb-port" class="step-select" style="flex:1;" onclick="fetchUsbPorts()">
+            <option value="">Select Port...</option>
+          </select>
+          <button class="btn-connect" id="btn-usb-connect" onclick="usbConnect()">Connect</button>
+        </div>
+
+        <div class="esp-connect-row" id="ui-esp" style="display:none;">
           <input type="text" id="esp-ip" placeholder="ESP32 IP (e.g. 192.168.1.5)" />
           <button class="btn-connect" id="btn-esp-connect" onclick="espConnect()">Connect</button>
         </div>
+
         <div class="esp-status" id="esp-status">
           <div class="dot-indicator" id="esp-dot"></div>
           <span id="esp-status-text">Disconnected</span>
@@ -1405,16 +1418,16 @@
             id="esp-y">0.00</span> mm
         </div>
 
-        <!-- D-pad Jog (sends to ESP32) -->
+        <!-- D-pad Jog -->
         <div class="esp-dpad" id="esp-dpad">
           <div></div>
-          <button class="esp-dpad-btn" disabled onclick="espJog('y', 1)" title="Y+">▲</button>
+          <button class="esp-dpad-btn" disabled onclick="machineJog('y', 1)" title="Y+">▲</button>
           <div></div>
-          <button class="esp-dpad-btn" disabled onclick="espJog('x', 0)" title="X-">◀</button>
-          <button class="esp-dpad-btn home-btn" disabled onclick="espHome()" title="Home">⌂</button>
-          <button class="esp-dpad-btn" disabled onclick="espJog('x', 1)" title="X+">▶</button>
+          <button class="esp-dpad-btn" disabled onclick="machineJog('x', 0)" title="X-">◀</button>
+          <button class="esp-dpad-btn home-btn" disabled onclick="machineHome()" title="Home">⌂</button>
+          <button class="esp-dpad-btn" disabled onclick="machineJog('x', 1)" title="X+">▶</button>
           <div></div>
-          <button class="esp-dpad-btn" disabled onclick="espJog('y', 0)" title="Y-">▼</button>
+          <button class="esp-dpad-btn" disabled onclick="machineJog('y', 0)" title="Y-">▼</button>
           <div></div>
         </div>
 
@@ -1432,14 +1445,14 @@
         <div class="laser-control">
           <input type="range" id="esp-laser-pwr" min="0" max="1000" value="100" disabled />
           <span class="pwr-label" id="esp-laser-pwr-label">10%</span>
-          <button class="btn-fire" id="btn-fire" disabled onclick="espToggleLaser()">FIRE</button>
+          <button class="btn-fire" id="btn-fire" disabled onclick="machineToggleLaser()">FIRE</button>
         </div>
 
         <!-- G-Code Streaming -->
-        <button class="btn-stream" id="btn-stream" disabled onclick="espStreamGCode()">
-          ▶ Stream to ESP32
+        <button class="btn-stream" id="btn-stream" disabled onclick="machineStreamGCode()">
+          ▶ Stream to CNC
         </button>
-        <button class="btn-estop" id="btn-estop" onclick="espEmergencyStop()">
+        <button class="btn-estop" id="btn-estop" onclick="machineEmergencyStop()">
           ⏹ EMERGENCY STOP
         </button>
 
@@ -1484,23 +1497,24 @@
                       width:100%; aspect-ratio: {{ board.width_mm }} / {{ board.height_mm }};
                       background: {{ board_bg }}; border-radius: 3px;"></div>
 
-          <div id="trace-layers" style="position:absolute; width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-          {% for file in files %}
-          <img class="layer-img" data-file="{{ file }}" src="/render/{{ file }}" alt="{{ file }}" onload="onLayerLoad()"
-            onerror="onLayerError(this)">
-          {% endfor %}
+          <div id="trace-layers"
+            style="position:absolute; width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            {% for file in files %}
+            <img class="layer-img" data-file="{{ file }}" src="/render/{{ file }}" alt="{{ file }}"
+              onload="onLayerLoad()" onerror="onLayerError(this)">
+            {% endfor %}
 
-          <!-- Dimension annotations move with the trace orientation -->
-          {% if board %}
-          <div class="dim-container" id="dim-container">
-            <div class="dim-wrapper" id="dim-wrapper">
-              <div class="dim-line-h"></div>
-              <div class="dim-label dim-width">↔ {{ board.width_mm }} mm</div>
-              <div class="dim-line-v"></div>
-              <div class="dim-label dim-height">↕ {{ board.height_mm }} mm</div>
+            <!-- Dimension annotations move with the trace orientation -->
+            {% if board %}
+            <div class="dim-container" id="dim-container">
+              <div class="dim-wrapper" id="dim-wrapper">
+                <div class="dim-line-h"></div>
+                <div class="dim-label dim-width">↔ {{ board.width_mm }} mm</div>
+                <div class="dim-line-v"></div>
+                <div class="dim-label dim-height">↕ {{ board.height_mm }} mm</div>
+              </div>
             </div>
-          </div>
-          {% endif %}
+            {% endif %}
           </div>
 
           {% else %}
@@ -1844,7 +1858,7 @@
       // Map orientation values to CSS transforms
       const transformMap = {
         'normal': 'none',
-        'rot90':  'rotate(-90deg)',
+        'rot90': 'rotate(-90deg)',
         'rot180': 'rotate(180deg)',
         'rot270': 'rotate(90deg)',
       };
@@ -2381,11 +2395,217 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // ── ESP32 Machine Control Logic ──────────────────────────────
+    // ── Machine Control Logic (Dual Mode) ────────────────────────
     // ════════════════════════════════════════════════════════════════
 
-    let espIP = '';
+    let connMode = 'usb';
+    let usbConnected = false;
     let espConnected = false;
+
+    function updateConnModeUI() {
+      connMode = document.getElementById('conn-mode').value;
+      if (connMode === 'usb') {
+        document.getElementById('ui-usb').style.display = 'flex';
+        document.getElementById('ui-esp').style.display = 'none';
+        document.getElementById('esp-status-text').textContent = usbConnected ? 'Connected (USB)' : 'Disconnected';
+        document.getElementById('esp-dot').className = 'dot-indicator ' + (usbConnected ? 'online' : '');
+      } else {
+        document.getElementById('ui-usb').style.display = 'none';
+        document.getElementById('ui-esp').style.display = 'flex';
+        document.getElementById('esp-status-text').textContent = espConnected ? 'Connected (ESP32)' : 'Disconnected';
+        document.getElementById('esp-dot').className = 'dot-indicator ' + (espConnected ? 'online' : '');
+      }
+    }
+
+    // ── USB Control ──
+
+    async function fetchUsbPorts() {
+      try {
+        const res = await fetch('/api/serial/ports');
+        const data = await res.json();
+        const select = document.getElementById('usb-port');
+        const current = select.value;
+        select.innerHTML = '<option value="">Select Port...</option>';
+        data.ports.forEach(port => {
+          const opt = document.createElement('option');
+          opt.value = port;
+          opt.textContent = port;
+          select.appendChild(opt);
+        });
+        if (data.ports.includes(current)) select.value = current;
+      } catch (e) {
+        console.error('Failed to fetch USB ports:', e);
+      }
+    }
+
+    async function usbConnect() {
+      const port = document.getElementById('usb-port').value;
+      if (!port) { alert('Select a USB port first'); return; }
+
+      document.getElementById('esp-status-text').textContent = 'Connecting...';
+      try {
+        const res = await fetch('/api/serial/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ port: port, baud: 115200 })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        usbConnected = true;
+        document.getElementById('esp-dot').classList.add('online');
+        document.getElementById('esp-status-text').textContent = `Connected (${port})`;
+        document.getElementById('btn-usb-connect').textContent = '✓ Online';
+        document.getElementById('btn-usb-connect').classList.add('connected');
+        enableMachineControls();
+        usbPollStatus();
+        statusPollTimer = setInterval(usbPollStatus, 1500);
+      } catch (e) {
+        usbConnected = false;
+        document.getElementById('esp-dot').classList.remove('online');
+        document.getElementById('esp-status-text').textContent = 'Connection failed: ' + e.message;
+        document.getElementById('btn-usb-connect').textContent = 'Retry';
+        document.getElementById('btn-usb-connect').classList.remove('connected');
+      }
+    }
+
+    async function usbPollStatus() {
+      if (!usbConnected) return;
+      try {
+        const res = await fetch('/api/serial/status');
+        const data = await res.json();
+        if (!data.connected) {
+          usbConnected = false;
+          updateConnModeUI();
+          document.getElementById('btn-usb-connect').textContent = 'Connect';
+          document.getElementById('btn-usb-connect').classList.remove('connected');
+        } else if (data.streaming && isStreaming) {
+           const pct = data.total_lines > 0 ? (data.sent_lines / data.total_lines) * 100 : 0;
+           document.getElementById('stream-bar-fill').style.width = pct + '%';
+           document.getElementById('stream-status').textContent = `Streaming ${data.sent_lines}/${data.total_lines}...`;
+        }
+      } catch (e) { }
+    }
+
+    function enableMachineControls() {
+      document.querySelectorAll('.esp-dpad-btn').forEach(b => b.disabled = false);
+      document.getElementById('esp-laser-pwr').disabled = false;
+      document.getElementById('btn-fire').disabled = false;
+      document.getElementById('btn-stream').disabled = false;
+      document.getElementById('esp-pos').style.display = 'block';
+    }
+
+    // ── Dual Mode Dispatchers ──
+
+    async function machineJog(axis, dir) {
+      // Soft Limits Check based on homing coordinates (0, 500)
+      let currentX = parseFloat(document.getElementById('esp-x').textContent) || 0;
+      let currentY = parseFloat(document.getElementById('esp-y').textContent) || 0;
+      
+      if (axis.toLowerCase() === 'x' && dir === -1 && currentX <= 0) {
+        alert("Limit Reached: Cannot move further in -X direction.");
+        return;
+      }
+      if (axis.toLowerCase() === 'y' && dir === 1 && currentY >= 500) {
+        alert("Limit Reached: Cannot move further in +Y direction.");
+        return;
+      }
+      if (connMode === 'usb') {
+        // Convert step counts to mm (ESP step values are at 1280 steps/mm)
+        const stepToMm = {
+          '16': 0.0125, '80': 0.0625, '160': 0.125,
+          '400': 0.3125, '800': 0.625, '1600': 1.25
+        };
+        const steps = document.getElementById('esp-step').value;
+        const mm = stepToMm[steps] || 0.125;
+        const dist = dir === 1 ? mm : -mm;
+        const axisLetter = axis.toUpperCase();
+        // Use incremental move: G91 (relative), G1 (linear move)
+        const cmd = `G91\nG1 ${axisLetter}${dist.toFixed(4)} F500\nG90`;
+        const res = await fetch('/api/serial/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd })
+        });
+        const data = await res.json();
+        console.log('Jog response:', data.response);
+      } else {
+        await espJog(axis, dir);
+      }
+    }
+
+    async function machineHome() {
+      if (connMode === 'usb') {
+        await fetch('/api/serial/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: '$H' })
+        });
+      } else {
+        await espHome();
+      }
+    }
+
+    async function machineToggleLaser() {
+      const btn = document.getElementById('btn-fire');
+      const isOn = btn.classList.contains('active');
+      const pwr = document.getElementById('esp-laser-pwr').value;
+      const s_val = Math.round((pwr / 1000) * 255); // assuming standard GRBL S0-255 scale
+
+      if (connMode === 'usb') {
+        const cmd = isOn ? 'M5' : `M3 S${s_val}`;
+        await fetch('/api/serial/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd })
+        });
+        if (isOn) {
+          btn.classList.remove('active');
+          btn.textContent = 'FIRE';
+        } else {
+          btn.classList.add('active');
+          btn.textContent = 'OFF';
+        }
+      } else {
+        await espToggleLaser();
+      }
+    }
+
+    async function machineStreamGCode() {
+      if (connMode === 'usb') {
+        if (!usbConnected || isStreaming) return;
+        isStreaming = true;
+        document.getElementById('btn-stream').disabled = true;
+        document.getElementById('btn-estop').classList.add('visible');
+        document.getElementById('stream-progress').classList.add('visible');
+        document.getElementById('stream-status').textContent = 'Starting stream...';
+        document.getElementById('stream-bar-fill').style.width = '0%';
+        
+        try {
+          const res = await fetch('/api/serial/stream', { method: 'POST' });
+          if (!res.ok) throw new Error(await res.text());
+        } catch (e) {
+          alert("Stream failed to start: " + e.message);
+          isStreaming = false;
+          document.getElementById('btn-stream').disabled = false;
+        }
+      } else {
+        await espStreamGCode();
+      }
+    }
+
+    async function machineEmergencyStop() {
+      if (connMode === 'usb') {
+        await fetch('/api/serial/stop', { method: 'POST' });
+        isStreaming = false;
+        document.getElementById('stream-status').textContent = '⏹ EMERGENCY STOP sent';
+        document.getElementById('stream-status').style.color = '#ff4444';
+      } else {
+        await espEmergencyStop();
+      }
+    }
+
+    // ── ESP32 Control ──
+
+    let espIP = '';
     let isStreaming = false;
     let streamAbort = false;
     let statusPollTimer = null;
@@ -2408,13 +2628,8 @@
           document.getElementById('esp-status-text').textContent = `Connected (${espIP})`;
           document.getElementById('btn-esp-connect').textContent = '✓ Online';
           document.getElementById('btn-esp-connect').classList.add('connected');
-          document.getElementById('esp-pos').style.display = 'block';
-
-          // Enable controls
-          document.querySelectorAll('.esp-dpad-btn').forEach(b => b.disabled = false);
-          document.getElementById('esp-laser-pwr').disabled = false;
-          document.getElementById('btn-fire').disabled = false;
-          document.getElementById('btn-stream').disabled = false;
+          
+          enableMachineControls();
 
           // Start polling position
           espPollStatus();
