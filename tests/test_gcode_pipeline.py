@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-test_gcode_pipeline.py — Mathematical verification tests
+test_gcode_pipeline.py -- Mathematical verification tests
 
 Tests the full G-code pipeline WITHOUT any hardware:
-  1. G-code generation → output.gcode
+  1. G-code generation -> output.gcode
   2. G-code validity (GRBL-compatible commands)
   3. Laser safety (M5 before every rapid)
   4. Coordinate bounds
@@ -26,7 +26,7 @@ from io import StringIO
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# ─── Test Counters ────────────────────────────────────────────────
+# --- Test Counters ----------------------------------------------------
 passed = 0
 failed = 0
 errors = []
@@ -35,20 +35,20 @@ def test(name, condition, detail=""):
     global passed, failed
     if condition:
         passed += 1
-        print(f"  ✅ {name}")
+        print(f"  [PASS] {name}")
     else:
         failed += 1
-        msg = f"  ❌ {name}" + (f" — {detail}" if detail else "")
+        msg = f"  [FAIL] {name}" + (f" -- {detail}" if detail else "")
         print(msg)
         errors.append(msg)
 
 
-# ══════════════════════════════════════════════════════════════════
-# TEST 1: G-Code Generator — Valid Output
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
-print("TEST 1: G-code Generator — Valid Output")
-print("═"*60)
+# ==================================================================
+# TEST 1: G-Code Generator -- Valid Output
+# ==================================================================
+print("\n" + "="*60)
+print("TEST 1: G-code Generator -- Valid Output")
+print("="*60)
 
 from parser.gcode_generator import generate_gcode
 
@@ -116,12 +116,12 @@ test("Has laser off (M5)", m5_count >= 1, f"Found {m5_count} M5 commands")
 test("Has pad dwell (G4)", g4_count == 2, f"Found {g4_count} G4 commands (expected 2)")
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # TEST 2: G-Code GRBL Validity
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
+# ==================================================================
+print("\n" + "="*60)
 print("TEST 2: G-code GRBL Validity")
-print("═"*60)
+print("="*60)
 
 GRBL_VALID = re.compile(
     r'^(G\d+|M\d+|F\d+|\$[A-Za-z0-9=])'
@@ -140,12 +140,12 @@ test("All lines are valid GRBL commands", len(invalid_lines) == 0,
      f"Invalid: {invalid_lines[:3]}")
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # TEST 3: Laser Safety
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
-print("TEST 3: Laser Safety — M5 Before Every Rapid Move")
-print("═"*60)
+# ==================================================================
+print("\n" + "="*60)
+print("TEST 3: Laser Safety -- M5 Before Every Rapid Move")
+print("="*60)
 
 laser_state = False
 unsafe_rapids = []
@@ -163,12 +163,12 @@ test("No rapid moves while laser is ON", len(unsafe_rapids) == 0,
      f"Unsafe rapids: {unsafe_rapids[:3]}")
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # TEST 4: Coordinate Bounds
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
+# ==================================================================
+print("\n" + "="*60)
 print("TEST 4: Coordinate Bounds Check")
-print("═"*60)
+print("="*60)
 
 coord_pattern = re.compile(r'X([-\d.]+)\s*Y([-\d.]+)')
 out_of_bounds = []
@@ -194,12 +194,12 @@ test("Coordinates are 3-decimal precision",
      all(re.search(r'X[-\d]+\.\d{3}', l) for l in move_lines))
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # TEST 5: Scale Factor
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
+# ==================================================================
+print("\n" + "="*60)
 print("TEST 5: Scale Factor")
-print("═"*60)
+print("="*60)
 
 with tempfile.NamedTemporaryFile(mode='w', suffix='.gcode', delete=False) as f:
     gcode_2x_path = f.name
@@ -232,12 +232,12 @@ test("Scale 2x doubles Y coordinate",
      f"1x: Y={y1}, 2x: Y={y2}")
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # TEST 6: Serial Command Formatting
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
-print("TEST 6: Serial Command Formatting (USB → GRBL)")
-print("═"*60)
+# ==================================================================
+print("\n" + "="*60)
+print("TEST 6: Serial Command Formatting (USB -> GRBL)")
+print("="*60)
 
 step_to_mm = {
     '16': 0.0125, '80': 0.0625, '160': 0.125,
@@ -247,8 +247,8 @@ step_to_mm = {
 for step, mm in step_to_mm.items():
     cmd = f"G91\nG1 X{mm:.4f} F500\nG90"
     lines = [l.strip() for l in cmd.split('\n') if l.strip()]
-    test(f"Step {step} → {mm}mm produces 3 lines", len(lines) == 3)
-    test(f"Step {step}: G91 → G1 → G90 order", 
+    test(f"Step {step} -> {mm}mm produces 3 lines", len(lines) == 3)
+    test(f"Step {step}: G91 -> G1 -> G90 order", 
          lines[0] == "G91" and lines[1].startswith("G1 X") and lines[2] == "G90")
 
 test_cmd = "G1 X10.5 Y20.3 F500"
@@ -263,15 +263,15 @@ test("$H encodes correctly", encoded_h == b"$H\n")
 
 for pwr in [0, 250, 500, 750, 1000]:
     s_val = round((pwr / 1000) * 255)
-    test(f"Laser power {pwr}/1000 → S{s_val} (0-255 range)", 0 <= s_val <= 255)
+    test(f"Laser power {pwr}/1000 -> S{s_val} (0-255 range)", 0 <= s_val <= 255)
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # TEST 7: G-code Flow Order
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
+# ==================================================================
+print("\n" + "="*60)
 print("TEST 7: G-code Flow Correctness")
-print("═"*60)
+print("="*60)
 
 init_idx = next((i for i, l in enumerate(active_lines) if l.startswith("G21")), -1)
 home_idx = next((i for i, l in enumerate(active_lines) if l.startswith("G28")), -1)
@@ -291,15 +291,15 @@ for i, line in enumerate(active_lines):
         if i < len(active_lines)-1 and not active_lines[i+1].startswith("M5"):
             pad_sequences_valid = False
 
-test("Pad sequence: M3 → G4 → M5", pad_sequences_valid)
+test("Pad sequence: M3 -> G4 -> M5", pad_sequences_valid)
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # TEST 8: Feed Rate Consistency
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
+# ==================================================================
+print("\n" + "="*60)
 print("TEST 8: Feed Rate Consistency")
-print("═"*60)
+print("="*60)
 
 feed_pattern = re.compile(r'F(\d+)')
 feed_rates_found = set()
@@ -314,12 +314,12 @@ test("All G1 moves have consistent feed rate", len(feed_rates_found) <= 1,
 test("Feed rate is 1000 mm/min", 1000 in feed_rates_found or len(feed_rates_found) == 0)
 
 
-# ══════════════════════════════════════════════════════════════════
+# ==================================================================
 # RESULTS
-# ══════════════════════════════════════════════════════════════════
-print("\n" + "═"*60)
+# ==================================================================
+print("\n" + "="*60)
 print(f"RESULTS: {passed} passed, {failed} failed")
-print("═"*60)
+print("="*60)
 
 if errors:
     print("\nFailed tests:")

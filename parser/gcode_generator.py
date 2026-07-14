@@ -37,7 +37,7 @@ FEED_RATE = 1000        # mm/min for drawing moves (G1)
 RAPID_FEED = 3000       # mm/min for rapid moves (some controllers need this)
 PAD_DWELL_MS = 200       # milliseconds to dwell on pad locations
 LASER_POWER = 1000       # default S value for trace drawing (0-1000)
-PAD_LASER_POWER = 1200   # S value for pad exposure (higher = more burn)
+PAD_LASER_POWER = 1000   # S value for pad exposure (matches LASER_POWER)
 
 
 def generate_gcode(input_path: str = None, output_path: str = None,
