@@ -856,6 +856,50 @@ async def stop_serial_stream():
     serial_mgr.abort_flag = True
     return {"success": True}
 
+@app.get("/api/serial/position")
+async def get_serial_position():
+    """
+    Query GRBL's current machine position using the '?' real-time status command.
+    GRBL responds with: <Idle|MPos:X,Y,Z|...>
+    Returns parsed X, Y, Z in mm and the machine state string.
+    """
+    import re
+    if not serial_mgr.serial_port or not serial_mgr.serial_port.is_open:
+        raise HTTPException(status_code=400, detail="Not connected")
+    if serial_mgr.streaming:
+        # Don't interrupt streaming — return last known pos
+        return {"x": 0.0, "y": 0.0, "z": 0.0, "state": "Run"}
+    try:
+        def _query():
+            # '?' is a GRBL real-time command — no newline needed
+            serial_mgr.serial_port.write(b"?")
+            # GRBL sends the status report immediately on the next cycle
+            # Give it up to 1 second to respond
+            original = serial_mgr.serial_port.timeout
+            serial_mgr.serial_port.timeout = 1.0
+            try:
+                resp = serial_mgr.serial_port.readline().decode(errors='replace').strip()
+            finally:
+                serial_mgr.serial_port.timeout = original
+            return resp
+
+        resp = await asyncio.to_thread(_query)
+        # Parse: <Idle|MPos:10.000,25.000,0.000|Bf:15,127|FS:0,0>
+        m = re.search(r'MPos:([-\d.]+),([-\d.]+),([-\d.]+)', resp)
+        state_m = re.search(r'<(\w+)\|', resp)
+        if m:
+            return {
+                "x": float(m.group(1)),
+                "y": float(m.group(2)),
+                "z": float(m.group(3)),
+                "state": state_m.group(1) if state_m else "Unknown",
+                "raw": resp
+            }
+        else:
+            return {"x": 0.0, "y": 0.0, "z": 0.0, "state": "Unknown", "raw": resp}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/serial/stream-events")
 async def stream_events():
     """
