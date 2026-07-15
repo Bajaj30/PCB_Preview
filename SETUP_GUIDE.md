@@ -35,11 +35,17 @@ curl -sSL https://install.python-poetry.org | python3 -
 Now that your computer has the right tools, let's download the PCB Preview app.
 
 ### Step 1: Clone the Repository
-In your terminal, navigate to the folder where you want to save the app (for example, your Desktop). Then, run this command to download the code:
+In your terminal, navigate to the folder where you want to save the app. For example, to save it on your Desktop, type:
+- **Windows:** `cd C:\Users\YourName\Desktop`
+- **Mac:** `cd ~/Desktop`
+
+Then, run this command to download the code:
 ```bash
 git clone -b friend-testing https://github.com/Abhi378-2005/PCB_Preview.git
 ```
-*(This command creates a new folder called `PCB_Preview` and downloads the most up-to-date `friend-testing` branch).*
+*(This command creates a new folder called `PCB_Preview` on your Desktop and downloads the most up-to-date `friend-testing` branch).*
+
+> **Note on HTTPS vs SSH:** We use a regular web link (`https://`) here because it works for everyone out of the box. If the repository is set to **Private** on GitHub, your terminal will pop up a small window asking for your GitHub username and password — just enter them and it will continue downloading normally.
 
 ### Step 2: Open the Folder
 Tell your terminal to look inside the folder you just downloaded by running:
@@ -67,9 +73,12 @@ poetry run pcb-preview
 ```
 *(If that doesn't work, you can also try running `python main.py`).*
 
+> **Poetry not found? (Common Windows issue):** If your terminal says `poetry: command not found`, close the terminal completely, reopen it, and try again. Poetry sometimes needs a fresh terminal session to be recognized after installation.
+
 **What happens next?**
 1. Your terminal will show some text saying the "Uvicorn" server has started.
-2. After about 1 second, your default web browser (like Chrome or Edge) will automatically open a new tab pointing to `http://localhost:5050`. 
+2. After about 1 second, your default web browser (like Chrome or Edge) will automatically open a new tab pointing to `http://localhost:5050`.
+   - *If the browser does NOT open automatically, just open your browser manually and type `http://localhost:5050` in the address bar and hit Enter.*
 3. **Important:** Do not close the terminal window while you are using the app! The terminal is the "engine" running in the background. When you are done using the app, you can close the terminal to shut it down.
 
 ---
