@@ -22,11 +22,17 @@ Poetry is a helper tool that automatically downloads all the extra background so
 - Open your terminal. 
   - *On Windows:* Press the `Windows Key`, type `powershell`, and hit Enter.
   - *On Mac:* Press `Cmd + Space`, type `Terminal`, and hit Enter.
-- Copy and paste this exact command into the terminal and hit Enter:
+- Copy and paste the exact command for your operating system into the terminal and hit Enter:
+
+**For Windows (PowerShell):**
+```powershell
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+```
+
+**For Mac/Linux:**
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
 ```
-*(If the command fails on Windows, try replacing `python3` with `python`).*
 
 ---
 
