@@ -61,8 +61,9 @@ Once your board looks good, the app can convert that picture into **G-Code**—t
 ### 3. USB CNC Connection
 You don't need a separate program to send the G-Code to your machine!
 - Connect your CNC machine or Laser Engraver via USB.
-- Use the **Connect** panel on the webpage to link directly to your machine.
-- You can now talk directly to the machine from your browser.
+- On the webpage, look for the **Connect** panel.
+- Select your machine's COM port from the dropdown (e.g., `COM3` on Windows or `/dev/ttyUSB0` on Mac/Linux). If you don't see it, try clicking the refresh icon next to the dropdown.
+- Click the **Connect** button. You can now talk directly to the machine from your browser.
 
 ### 4. Machine Controls (Jogging & Homing)
 - **Homing:** Click the "Home" button to tell the machine to find its starting `(0,0)` position.
