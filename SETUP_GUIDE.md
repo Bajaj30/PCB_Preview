@@ -85,9 +85,13 @@ poetry run python main.py
 
 ### How to close and restart the app later
 - **To close:** Simply close the terminal window, or press `Ctrl + C` in the terminal to stop the server.
-- **To restart later:** You do **not** need to download anything again! Just open your terminal, navigate back into the folder, and run the start command:
-  1. `cd "C:\Users\YourName\Desktop\PCB_Preview"` *(change the path to wherever you saved it)*
-  2. `poetry run python main.py`
+- **To restart later:** You do **not** need to download anything again! Just open your terminal and do two things:
+  1. Navigate back into the folder. The exact command depends on where you saved it and what operating system you are using. For example:
+     - **Windows:** `cd "C:\Users\YourName\Desktop\PCB_Preview"` 
+     - **Mac:** `cd ~/Desktop/PCB_Preview`
+     - *(Beginner Tip: Type `cd ` (with a space after it), then drag and drop the `PCB_Preview` folder from your desktop directly into the terminal window and hit Enter!)*
+  2. Run the start command:
+     `poetry run python main.py`
 
 ---
 
