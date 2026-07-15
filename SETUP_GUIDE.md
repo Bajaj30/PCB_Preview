@@ -37,8 +37,10 @@ Now that your computer has the right tools, let's download the PCB Preview app.
 
 ### Step 1: Clone the Repository
 In your terminal, navigate to the folder where you want to save the app. For example, to save it on your Desktop, type:
-- **Windows:** `cd C:\Users\YourName\Desktop`
+- **Windows:** `cd "C:\Users\YourName\Desktop"`
 - **Mac:** `cd ~/Desktop`
+
+> **Tip for folders with spaces:** If you are trying to navigate into a folder that has a space in its name (like `PCB preview`), you **must** put the path inside double quotes like this: `cd "C:\Users\YourName\Desktop\PCB preview"`. Otherwise, the terminal will give you an error!
 
 Then, run this command to download the code:
 ```bash
