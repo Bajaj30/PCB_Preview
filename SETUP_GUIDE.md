@@ -72,9 +72,8 @@ You are now ready to start the app!
 ### Start the Server
 Make sure you are still inside the `PCB_Preview` folder in your terminal, and run:
 ```bash
-poetry run pcb-preview
+poetry run python main.py
 ```
-*(If that doesn't work, you can also try running `python main.py`).*
 
 > **Poetry not found? (Common Windows issue):** If your terminal says `poetry: command not found`, close the terminal completely, reopen it, and try again. Poetry sometimes needs a fresh terminal session to be recognized after installation.
 
