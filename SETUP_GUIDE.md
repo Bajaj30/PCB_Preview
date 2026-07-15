@@ -81,7 +81,13 @@ poetry run python main.py
 1. Your terminal will show some text saying the "Uvicorn" server has started.
 2. After about 1 second, your default web browser (like Chrome or Edge) will automatically open a new tab pointing to `http://localhost:5050`.
    - *If the browser does NOT open automatically, just open your browser manually and type `http://localhost:5050` in the address bar and hit Enter.*
-3. **Important:** Do not close the terminal window while you are using the app! The terminal is the "engine" running in the background. When you are done using the app, you can close the terminal to shut it down.
+3. **Important:** Do not close the terminal window while you are using the app! The terminal is the "engine" running in the background.
+
+### How to close and restart the app later
+- **To close:** Simply close the terminal window, or press `Ctrl + C` in the terminal to stop the server.
+- **To restart later:** You do **not** need to download anything again! Just open your terminal, navigate back into the folder, and run the start command:
+  1. `cd "C:\Users\YourName\Desktop\PCB_Preview"` *(change the path to wherever you saved it)*
+  2. `poetry run python main.py`
 
 ---
 
