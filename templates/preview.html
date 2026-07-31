@@ -2496,6 +2496,18 @@
     // ── Dual Mode Dispatchers ──
 
     async function machineJog(axis, dir) {
+      // Soft Limits Check based on homing coordinates (0, 500)
+      let currentX = parseFloat(document.getElementById('esp-x').textContent) || 0;
+      let currentY = parseFloat(document.getElementById('esp-y').textContent) || 0;
+      
+      if (axis.toLowerCase() === 'x' && dir === -1 && currentX <= 0) {
+        alert("Limit Reached: Cannot move further in -X direction.");
+        return;
+      }
+      if (axis.toLowerCase() === 'y' && dir === 1 && currentY >= 500) {
+        alert("Limit Reached: Cannot move further in +Y direction.");
+        return;
+      }
       if (connMode === 'usb') {
         // Convert step counts to mm (ESP step values are at 1280 steps/mm)
         const stepToMm = {
@@ -2525,7 +2537,7 @@
         await fetch('/api/serial/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: 'G28' })
+          body: JSON.stringify({ command: '$H' })
         });
       } else {
         await espHome();
