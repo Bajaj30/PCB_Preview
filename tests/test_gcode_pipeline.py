@@ -83,7 +83,7 @@ with tempfile.NamedTemporaryFile(mode='w', suffix='.gcode', delete=False) as f:
 old_stdout = sys.stdout
 sys.stdout = StringIO()
 try:
-    generate_gcode(input_path=toolpath_path, output_path=gcode_path, feed_rate=1000, scale=1)
+    generate_gcode(input_path=toolpath_path, output_path=gcode_path, burn_speed=1000, scale=1)
 finally:
     sys.stdout = old_stdout
 
@@ -105,13 +105,15 @@ test("Has G0 X0 Y0 (return to origin)", any("G0 X0" in l and "Y0" in l for l in 
 # Count G-code command types
 g0_count = sum(1 for l in active_lines if l.startswith("G0 X"))
 g1_count = sum(1 for l in active_lines if l.startswith("G1 X"))
+m4_count = sum(1 for l in active_lines if l.startswith("M4"))
 m3_count = sum(1 for l in active_lines if l.startswith("M3"))
 m5_count = sum(1 for l in active_lines if l.startswith("M5"))
 g4_count = sum(1 for l in active_lines if l.startswith("G4"))
 
 test("Has rapid moves (G0)", g0_count >= 3, f"Found {g0_count} G0 moves")
 test("Has draw moves (G1)", g1_count >= 5, f"Found {g1_count} G1 moves")
-test("Has laser on (M3)", m3_count >= 1, f"Found {m3_count} M3 commands")
+test("Has laser on M4 (dynamic, traces)", m4_count >= 1, f"Found {m4_count} M4 commands")
+test("Has laser on M3 (constant, pads)", m3_count >= 1, f"Found {m3_count} M3 commands")
 test("Has laser off (M5)", m5_count >= 1, f"Found {m5_count} M5 commands")
 test("Has pad dwell (G4)", g4_count == 2, f"Found {g4_count} G4 commands (expected 2)")
 
@@ -152,7 +154,7 @@ unsafe_rapids = []
 
 for i, line in enumerate(active_lines):
     code = line.split(';')[0].strip()
-    if code.startswith("M3"):
+    if code.startswith("M3") or code.startswith("M4"):
         laser_state = True
     elif code.startswith("M5"):
         laser_state = False
@@ -206,7 +208,7 @@ with tempfile.NamedTemporaryFile(mode='w', suffix='.gcode', delete=False) as f:
 
 sys.stdout = StringIO()
 try:
-    generate_gcode(input_path=toolpath_path, output_path=gcode_2x_path, feed_rate=1000, scale=2)
+    generate_gcode(input_path=toolpath_path, output_path=gcode_2x_path, burn_speed=1000, scale=2)
 finally:
     sys.stdout = old_stdout
 
@@ -311,7 +313,7 @@ for line in active_lines:
 
 test("All G1 moves have consistent feed rate", len(feed_rates_found) <= 1,
      f"Found feed rates: {feed_rates_found}")
-test("Feed rate is 1000 mm/min", 1000 in feed_rates_found or len(feed_rates_found) == 0)
+test("Feed rate is default burn speed (1000 mm/min)", 1000 in feed_rates_found or len(feed_rates_found) == 0)
 
 
 # ==================================================================

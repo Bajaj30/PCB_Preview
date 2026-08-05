@@ -29,6 +29,70 @@ import time
 import serial
 import serial.tools.list_ports
 
+# ── Dummy Serial Port for Testing ──────────────────────────────────
+# Params stored at module level so they persist across reconnections
+_DUMMY_GRBL_PARAMS = {
+    0: 10, 1: 25, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 10: 3,
+    11: 0.010, 12: 0.002, 13: 0, 20: 0, 21: 1, 22: 1,
+    23: 4, 24: 25.000, 25: 500.000, 27: 5.000, 30: 1000,
+    31: 0, 32: 1, 100: 180.077, 101: 165.148, 102: 250.000,
+    110: 1000.000, 111: 1000.000, 112: 500.000, 120: 200.000,
+    121: 100.000, 122: 10.000, 130: 250.000, 131: 250.000,
+    132: 200.000
+}
+
+class DummySerial:
+    def __init__(self):
+        self.is_open = True
+        self.timeout = 1.0
+        self._buffer = b""
+        self._params = _DUMMY_GRBL_PARAMS  # shared reference — persists across reconnections
+    
+    @property
+    def in_waiting(self):
+        return len(self._buffer)
+        
+    def write(self, data):
+        cmd = data.decode('ascii', errors='ignore').strip()
+        if not cmd:
+            pass
+        elif cmd.startswith('$') and '=' in cmd:
+            try:
+                parts = cmd[1:].split('=')
+                self._params[int(parts[0])] = float(parts[1])
+                self._buffer += b"ok\r\n"
+            except:
+                self._buffer += b"error: bad format\r\n"
+        elif cmd == "$$":
+            for k, v in self._params.items():
+                self._buffer += f"${k}={v}\r\n".encode('ascii')
+            self._buffer += b"ok\r\n"
+        elif cmd == "?":
+            self._buffer += b"<Idle|MPos:0.000,0.000,0.000|Bf:15,127|FS:0,0>\r\n"
+        elif cmd == "$X":
+            self._buffer += b"[MSG:'$H'|'$X' to unlock]\r\nok\r\n"
+        else:
+            self._buffer += b"ok\r\n"
+        
+    def readline(self):
+        if b'\n' in self._buffer:
+            idx = self._buffer.find(b'\n')
+            line = self._buffer[:idx+1]
+            self._buffer = self._buffer[idx+1:]
+            return line
+        elif self._buffer:
+            line = self._buffer
+            self._buffer = b""
+            return line
+        return b""
+        
+    def reset_input_buffer(self):
+        self._buffer = b""
+        
+    def close(self):
+        self.is_open = False
+
+
 # ── Serial Manager ─────────────────────────────────────────────────
 class SerialManager:
     def __init__(self):
@@ -40,12 +104,33 @@ class SerialManager:
         self.sent_lines = 0
         self.machine_pos = {"x": "0.00", "y": "0.00"}
         self._sse_queues: set = set()  # SSE subscriber queues for live preview sync
+        self._lock = threading.Lock()  # Protects serial port from concurrent access
+
+    def _handle_disconnect(self, reason: str = "USB disconnected"):
+        """Cleanly tear down the serial connection and notify SSE subscribers."""
+        print(f"[SERIAL] Auto-disconnect: {reason}")
+        self.abort_flag = True
+        self.streaming = False
+        if self.serial_port:
+            try:
+                self.serial_port.close()
+            except Exception:
+                pass
+            self.serial_port = None
+        # Push a disconnected event so the browser reacts immediately
+        self._push_event({"type": "disconnected", "reason": reason})
+        print("[SERIAL] Disconnected")
 
     def connect(self, port: str, baud: int = 115200):
         if self.serial_port and self.serial_port.is_open:
             self.disconnect()
-        self.serial_port = serial.Serial(port, baud, timeout=2)
-        time.sleep(2)  # Wait for GRBL to initialize after DTR reset
+        if port == "Virtual GRBL (Dummy)":
+            self.serial_port = DummySerial()
+            self.serial_port._buffer += b"Grbl 1.1h ['$' for help]\r\n"
+            time.sleep(0.5)
+        else:
+            self.serial_port = serial.Serial(port, baud, timeout=2)
+            time.sleep(2)  # Wait for GRBL to initialize after DTR reset
         # Wake up GRBL with empty lines
         self.serial_port.write(b"\r\n\r\n")
         time.sleep(1)
@@ -86,61 +171,62 @@ class SerialManager:
         if not self.serial_port or not self.serial_port.is_open:
             raise Exception("Serial port not connected")
 
-        # Drain any stale data in the buffer first
-        drained = 0
-        while self.serial_port.in_waiting:
-            self.serial_port.readline()
-            drained += 1
-        if drained:
-            print(f"[SERIAL] Drained {drained} stale line(s) before sending")
+        with self._lock:
+            # Drain any stale data in the buffer first
+            drained = 0
+            while self.serial_port.in_waiting:
+                self.serial_port.readline()
+                drained += 1
+            if drained:
+                print(f"[SERIAL] Drained {drained} stale line(s) before sending")
 
-        # Support multi-line commands (split on \n)
-        # e.g. "G91\nG1 X0.125 F500\nG90" → 3 separate lines
-        lines = [l.strip() for l in cmd.strip().split('\n') if l.strip()]
-        all_responses = []
+            # Support multi-line commands (split on \n)
+            # e.g. "G91\nG1 X0.125 F500\nG90" → 3 separate lines
+            lines = [l.strip() for l in cmd.strip().split('\n') if l.strip()]
+            all_responses = []
 
-        for line in lines:
-            # Determine if this is a long-running GRBL command
-            is_homing = line.upper() in ('$H', '$H\r')
-            is_grbl_cmd = line.startswith('$')
+            for line in lines:
+                # Determine if this is a long-running GRBL command
+                is_homing = line.upper() in ('$H', '$H\r')
+                is_grbl_cmd = line.startswith('$')
 
-            # Temporarily increase timeout for homing ($H takes 10-30s)
-            original_timeout = self.serial_port.timeout
-            if is_homing:
-                self.serial_port.timeout = 30
-                print(f"[SERIAL] >>> {line}  (homing — timeout set to 30s)")
-            else:
-                print(f"[SERIAL] >>> {line}")
+                # Temporarily increase timeout for homing ($H takes 10-30s)
+                original_timeout = self.serial_port.timeout
+                if is_homing:
+                    self.serial_port.timeout = 30
+                    print(f"[SERIAL] >>> {line}  (homing — timeout set to 30s)")
+                else:
+                    print(f"[SERIAL] >>> {line}")
 
-            # Send the command with exactly \n (not \r\n)
-            self.serial_port.write((line + "\n").encode('ascii'))
+                # Send the command with exactly \n (not \r\n)
+                self.serial_port.write((line + "\n").encode('ascii'))
 
-            # Read responses until we get 'ok' or 'error' or timeout
-            while True:
-                try:
-                    resp = self.serial_port.readline().decode(errors='replace').strip()
-                except Exception as e:
-                    print(f"[SERIAL] Read error: {e}")
-                    resp = ""
+                # Read responses until we get 'ok' or 'error' or timeout
+                while True:
+                    try:
+                        resp = self.serial_port.readline().decode(errors='replace').strip()
+                    except Exception as e:
+                        print(f"[SERIAL] Read error: {e}")
+                        resp = ""
 
-                if not resp:
-                    print(f"[SERIAL] <<< (timeout, no response)")
-                    break  # timeout — no more data
-                print(f"[SERIAL] <<< {resp}")
-                all_responses.append(resp)
+                    if not resp:
+                        print(f"[SERIAL] <<< (timeout, no response)")
+                        break  # timeout — no more data
+                    print(f"[SERIAL] <<< {resp}")
+                    all_responses.append(resp)
 
-                # For standard G-code, stop on 'ok' or 'error'
-                if resp == 'ok' or resp.startswith('error'):
-                    break
-                # For GRBL $ commands, they may send multi-line data then 'ok'
-                # Keep reading until we hit 'ok'
+                    # For standard G-code, stop on 'ok' or 'error'
+                    if resp == 'ok' or resp.startswith('error'):
+                        break
+                    # For GRBL $ commands, they may send multi-line data then 'ok'
+                    # Keep reading until we hit 'ok'
 
-            # Restore original timeout
-            if is_homing:
-                self.serial_port.timeout = original_timeout
+                # Restore original timeout
+                if is_homing:
+                    self.serial_port.timeout = original_timeout
 
-        result = "; ".join(all_responses) if all_responses else "no response"
-        return result
+            result = "; ".join(all_responses) if all_responses else "no response"
+            return result
 
     def _stream_task(self, lines: list[str]):
         self.total_lines = len(lines)
@@ -165,21 +251,31 @@ class SerialManager:
 
             # Send and wait for 'ok'
             if self.serial_port and self.serial_port.is_open:
-                self.serial_port.write((line + "\n").encode('ascii'))
-                while True:
+                with self._lock:
                     try:
-                        resp = self.serial_port.readline().decode(errors='replace').strip()
-                    except Exception as e:
-                        print(f"[SERIAL] Stream read error: {e}")
-                        resp = ""
-                        break
-                    if resp == 'ok' or resp.startswith('error'):
-                        if resp.startswith('error'):
-                            print(f"[SERIAL] Stream error on line {self.sent_lines}: {resp} (cmd: {line})")
-                        break
-                    if not resp:
-                        print(f"[SERIAL] Stream timeout on line {self.sent_lines} (cmd: {line})")
-                        break
+                        self.serial_port.write((line + "\n").encode('ascii'))
+                    except serial.SerialException as e:
+                        print(f"[SERIAL] Stream write error: {e}")
+                        self._handle_disconnect(str(e))
+                        return
+                    while True:
+                        try:
+                            resp = self.serial_port.readline().decode(errors='replace').strip()
+                        except serial.SerialException as e:
+                            print(f"[SERIAL] Stream read error: {e}")
+                            self._handle_disconnect(str(e))
+                            return
+                        except Exception as e:
+                            print(f"[SERIAL] Stream read error: {e}")
+                            resp = ""
+                            break
+                        if resp == 'ok' or resp.startswith('error'):
+                            if resp.startswith('error'):
+                                print(f"[SERIAL] Stream error on line {self.sent_lines}: {resp} (cmd: {line})")
+                            break
+                        if not resp:
+                            print(f"[SERIAL] Stream timeout on line {self.sent_lines} (cmd: {line})")
+                            break
 
             self.sent_lines += 1
             # Push progress event to SSE subscribers
@@ -590,7 +686,10 @@ async def clear_gerbers():
 async def convert_gcode(scale: int = 1, layers: str = "",
                         mode: str = "trace", line_spacing: float = 0.1,
                         laser_diameter: float = 0.2,
-                        orientation: str = "normal"):
+                        orientation: str = "normal",
+                        burn_speed: int = 1000,
+                        rapid_speed: int = 3000,
+                        laser_power: int = 1000):
     """
     Run the full pipeline on selected layer files.
 
@@ -605,6 +704,9 @@ async def convert_gcode(scale: int = 1, layers: str = "",
       ?line_spacing=0.1    (raster scan line spacing in mm)
       ?laser_diameter=0.2  (physical laser spot size in mm)
       ?orientation=normal|mirror_x|rot90|rot180  (board orientation)
+      ?burn_speed=1000     (engraving speed in mm/min)
+      ?rapid_speed=3000    (travel speed in mm/min)
+      ?laser_power=1000    (laser power S-value, 0-1000)
     """
     # Clamp scale to allowed values
     if scale not in (1, 2, 3, 5, 10):
@@ -621,6 +723,11 @@ async def convert_gcode(scale: int = 1, layers: str = "",
     # Clamp line spacing and laser diameter
     line_spacing = max(0.05, min(2.0, line_spacing))
     laser_diameter = max(0.05, min(1.0, laser_diameter))
+
+    # Clamp speed and power parameters
+    burn_speed = max(100, min(10000, burn_speed))
+    rapid_speed = max(100, min(10000, rapid_speed))
+    laser_power = max(0, min(1000, laser_power))
 
     # Import pipeline modules
     from parser.parse_gerber import parse_gerber
@@ -726,8 +833,10 @@ async def convert_gcode(scale: int = 1, layers: str = "",
             toolpath = generate_toolpath(merged_parsed_path, toolpath_path,
                                          orientation=orientation)
 
-        # Step 3: Generate G-code (with scale)
-        generate_gcode(toolpath_path, gcode_path, scale=scale)
+        # Step 3: Generate G-code (with scale and user-controlled settings)
+        generate_gcode(toolpath_path, gcode_path, scale=scale,
+                       burn_speed=burn_speed, rapid_speed=rapid_speed,
+                       laser_power=laser_power)
 
         # Read generated G-code for stats
         with open(gcode_path, 'r') as f:
@@ -749,6 +858,9 @@ async def convert_gcode(scale: int = 1, layers: str = "",
             "scale": scale,
             "mode": mode,
             "layers_count": len(valid_files),
+            "burn_speed": burn_speed,
+            "rapid_speed": rapid_speed,
+            "laser_power": laser_power,
         }
 
         # Add raster-specific stats
@@ -804,6 +916,7 @@ import asyncio
 @app.get("/api/serial/ports")
 async def get_serial_ports():
     ports = [port.device for port in serial.tools.list_ports.comports()]
+    ports.append("Virtual GRBL (Dummy)")
     return {"ports": ports}
 
 @app.post("/api/serial/connect")
@@ -811,6 +924,8 @@ async def connect_serial(req: SerialConnectRequest):
     try:
         await asyncio.to_thread(serial_mgr.connect, req.port, req.baud)
         return {"success": True, "message": f"Connected to {req.port}"}
+    except serial.SerialException as e:
+        raise HTTPException(status_code=503, detail=f"Device unavailable: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -871,17 +986,18 @@ async def get_serial_position():
         return {"x": 0.0, "y": 0.0, "z": 0.0, "state": "Run"}
     try:
         def _query():
-            # '?' is a GRBL real-time command — no newline needed
-            serial_mgr.serial_port.write(b"?")
-            # GRBL sends the status report immediately on the next cycle
-            # Give it up to 1 second to respond
-            original = serial_mgr.serial_port.timeout
-            serial_mgr.serial_port.timeout = 1.0
-            try:
-                resp = serial_mgr.serial_port.readline().decode(errors='replace').strip()
-            finally:
-                serial_mgr.serial_port.timeout = original
-            return resp
+            with serial_mgr._lock:
+                # '?' is a GRBL real-time command — no newline needed
+                serial_mgr.serial_port.write(b"?")
+                # GRBL sends the status report immediately on the next cycle
+                # Give it up to 1 second to respond
+                original = serial_mgr.serial_port.timeout
+                serial_mgr.serial_port.timeout = 1.0
+                try:
+                    resp = serial_mgr.serial_port.readline().decode(errors='replace').strip()
+                finally:
+                    serial_mgr.serial_port.timeout = original
+                return resp
 
         resp = await asyncio.to_thread(_query)
         # Parse: <Idle|MPos:10.000,25.000,0.000|Bf:15,127|FS:0,0>
@@ -897,6 +1013,10 @@ async def get_serial_position():
             }
         else:
             return {"x": 0.0, "y": 0.0, "z": 0.0, "state": "Unknown", "raw": resp}
+    except serial.SerialException as e:
+        # Physical device was unplugged — auto-disconnect and tell the client
+        serial_mgr._handle_disconnect(str(e))
+        raise HTTPException(status_code=503, detail=f"Device disconnected: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -943,6 +1063,109 @@ async def stream_events():
             "X-Accel-Buffering": "no",  # disables nginx buffering
         }
     )
+
+
+# ── GRBL Parameter API ───────────────────────────────────────────────
+
+class GrblParamChange(BaseModel):
+    id: int
+    value: float
+
+class GrblSetParamsRequest(BaseModel):
+    params: list[GrblParamChange]
+
+
+@app.get("/api/grbl/params")
+async def get_grbl_params():
+    """
+    Query current GRBL $$ configuration.
+    Sends '$$' and parses the multi-line response into a dict.
+    """
+    import re
+    if not serial_mgr.serial_port or not serial_mgr.serial_port.is_open:
+        raise HTTPException(status_code=400, detail="Not connected")
+    if serial_mgr.streaming:
+        raise HTTPException(status_code=409, detail="Cannot read params while streaming")
+
+    try:
+        def _query_params():
+            with serial_mgr._lock:
+                # Drain stale data
+                while serial_mgr.serial_port.in_waiting:
+                    serial_mgr.serial_port.readline()
+
+                serial_mgr.serial_port.write(b"$$\n")
+                import time
+                time.sleep(0.5)
+
+                params = {}
+                original_timeout = serial_mgr.serial_port.timeout
+                serial_mgr.serial_port.timeout = 2.0
+                try:
+                    while True:
+                        line = serial_mgr.serial_port.readline().decode(errors='replace').strip()
+                        if not line:
+                            break
+                        if line == 'ok':
+                            break
+                        # Parse lines like "$0=10"
+                        m = re.match(r'^\$(\d+)=([\d.]+)', line)
+                        if m:
+                            params[int(m.group(1))] = float(m.group(2))
+                finally:
+                    serial_mgr.serial_port.timeout = original_timeout
+                return params
+
+        params = await asyncio.to_thread(_query_params)
+        return {"success": True, "params": params}
+
+    except serial.SerialException as e:
+        serial_mgr._handle_disconnect(str(e))
+        raise HTTPException(status_code=503, detail=f"Device disconnected: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/grbl/set-params")
+async def set_grbl_params(req: GrblSetParamsRequest):
+    """
+    Send one or more $ID=VALUE commands to the GRBL controller.
+    Each parameter is sent individually and its response is captured.
+    """
+    if not serial_mgr.serial_port or not serial_mgr.serial_port.is_open:
+        raise HTTPException(status_code=400, detail="Not connected")
+    if serial_mgr.streaming:
+        raise HTTPException(status_code=409, detail="Cannot set params while streaming")
+
+    results = []
+    try:
+        for param in req.params:
+            cmd = f"${param.id}={param.value}"
+            print(f"[GRBL] Setting parameter: {cmd}")
+            response = await asyncio.to_thread(serial_mgr.send_command, cmd)
+            success = 'ok' in response.lower()
+            results.append({
+                "id": param.id,
+                "value": param.value,
+                "command": cmd,
+                "response": response,
+                "success": success,
+            })
+            if not success:
+                print(f"[GRBL] Parameter {cmd} failed: {response}")
+
+        all_ok = all(r["success"] for r in results)
+        return {
+            "success": all_ok,
+            "results": results,
+            "message": f"Set {sum(1 for r in results if r['success'])}/{len(results)} parameters successfully"
+        }
+
+    except serial.SerialException as e:
+        serial_mgr._handle_disconnect(str(e))
+        raise HTTPException(status_code=503, detail=f"Device disconnected: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def main():
