@@ -10,20 +10,24 @@ Supported G-code commands:
   G21        — units: millimeters
   G90        — absolute positioning
   G28        — home all axes
-  G0 Xn Yn   — rapid move (laser off)
-  G1 Xn Yn Fn — linear draw (laser on) at feed rate F
-  M3 Sn      — laser on at power level n (0-1000)
+  G0 Xn Yn   — rapid move (laser off) at rapid_speed
+  G1 Xn Yn Fn — linear draw (laser on) at burn_speed
+  M4 Sn      — laser on, dynamic power mode (auto-scales with speed)
+  M3 Sn      — laser on, constant power (used only for stationary pad dwell)
   M5         — laser off
   G4 Pn      — dwell n milliseconds (pad exposure)
   M2         — program end
 
-Feed rate:
-  G0 (rapid): maximum speed, no F needed
-  G1 (draw):  configurable, default 1000 mm/min
+Feed rates:
+  G0 (rapid): rapid_speed, default 3000 mm/min (travel between features)
+  G1 (draw):  burn_speed, default 1000 mm/min (actual engraving)
 
 Laser control:
   M5 is emitted before every rapid move to prevent burning during travel.
-  M3 is emitted before every draw sequence with S value scaled to trace width.
+  M4 is emitted before draw sequences — GRBL dynamic power mode automatically
+  scales laser intensity with movement speed, preventing corner scorching.
+  M3 is used ONLY for pad dwell (G4) where the machine is stationary,
+  because M4 drops power to zero when not moving.
 """
 
 import json
@@ -33,23 +37,28 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ── Configuration ──────────────────────────────────────────────────
-FEED_RATE = 1000        # mm/min for drawing moves (G1)
-RAPID_FEED = 3000       # mm/min for rapid moves (some controllers need this)
-PAD_DWELL_MS = 200       # milliseconds to dwell on pad locations
-LASER_POWER = 1000       # default S value for trace drawing (0-1000)
-PAD_LASER_POWER = 1200   # S value for pad exposure (higher = more burn)
+DEFAULT_BURN_SPEED = 1000    # mm/min for drawing/engraving moves (G1)
+DEFAULT_RAPID_SPEED = 3000   # mm/min for rapid travel moves (G0)
+PAD_DWELL_MS = 200           # milliseconds to dwell on pad locations
+DEFAULT_LASER_POWER = 1000   # default S value for trace drawing (0-1000)
+PAD_LASER_POWER = 1000       # S value for pad exposure (matches LASER_POWER)
 
 
 def generate_gcode(input_path: str = None, output_path: str = None,
-                   feed_rate: int = FEED_RATE, scale: int = 1):
+                   burn_speed: int = DEFAULT_BURN_SPEED,
+                   rapid_speed: int = DEFAULT_RAPID_SPEED,
+                   laser_power: int = DEFAULT_LASER_POWER,
+                   scale: int = 1):
     """
     Generate G-code from toolpath.
 
     Args:
-        input_path:  Path to toolpath.json
-        output_path: Path for output G-code file
-        feed_rate:   Driawing feed rate in mm/min
-        scale:       Scale factor for all coordinates (1, 2, 5, 10)
+        input_path:   Path to toolpath.json
+        output_path:  Path for output G-code file
+        burn_speed:   Engraving feed rate in mm/min (G1 moves)
+        rapid_speed:  Travel feed rate in mm/min (G0 moves)
+        laser_power:  Laser power S-value (0-1000)
+        scale:        Scale factor for all coordinates (1, 2, 5, 10)
     """
     if input_path is None:
         input_path = str(PROJECT_ROOT / "output" / "toolpath.json")
@@ -70,6 +79,7 @@ def generate_gcode(input_path: str = None, output_path: str = None,
     scaled_h = round(work_area.get('height', 0) * scale, 2)
 
     print(f"[gcode] Processing {len(commands)} toolpath commands (scale: {scale}x, mode: {mode})...")
+    print(f"[gcode] Burn speed: {burn_speed} mm/min, Rapid speed: {rapid_speed} mm/min, Laser power: S{laser_power}")
 
     # Build G-code lines
     gcode = []
@@ -90,8 +100,9 @@ def generate_gcode(input_path: str = None, output_path: str = None,
         gcode.append(f"; Draw moves: {stats.get('draw_moves', 0)}")
         gcode.append(f"; Rapid moves: {stats.get('rapid_moves', 0)}")
         gcode.append(f"; Pad marks: {stats.get('pad_marks', 0)}")
-        gcode.append(f"; Feed rate: {feed_rate} mm/min")
-        gcode.append(f"; Laser power: S{LASER_POWER} (trace), S{PAD_LASER_POWER} (pad)")
+        gcode.append(f"; Burn speed: {burn_speed} mm/min")
+        gcode.append(f"; Rapid speed: {rapid_speed} mm/min")
+        gcode.append(f"; Laser power: S{laser_power} (trace, M4 dynamic), S{PAD_LASER_POWER} (pad, M3 constant)")
         gcode.append(f";")
     gcode.append(f"")
 
@@ -100,8 +111,8 @@ def generate_gcode(input_path: str = None, output_path: str = None,
     gcode.append("G90          ; Absolute positioning")
     gcode.append("G28          ; Home all axes")
     gcode.append("M5           ; Ensure laser is OFF")
-    gcode.append(f"G0 F{feed_rate}   ; Set rapid feed")
-    gcode.append(f"G1 F{feed_rate}   ; Set draw feed")
+    gcode.append(f"G0 F{rapid_speed}   ; Set rapid travel speed")
+    gcode.append(f"G1 F{burn_speed}    ; Set burn/engrave speed")
     gcode.append("")
 
     # Track state to avoid redundant laser on/off commands
@@ -125,15 +136,15 @@ def generate_gcode(input_path: str = None, output_path: str = None,
             if not laser_on:
                 if mode == 'raster':
                     # Raster mode: constant full power (like reference file)
-                    s_val = LASER_POWER
+                    s_val = laser_power
                 else:
                     # Vector trace mode: scale power based on trace width
                     #   0.20mm → S640,  0.25mm → S800,  0.50mm → S1000
                     width = cmd.get('width', 0.25)
-                    s_val = int(min(width / 0.25 * LASER_POWER, 1000))
-                gcode.append(f"M3 S{s_val}")
+                    s_val = int(min(width / 0.25 * laser_power, 1000))
+                gcode.append(f"M4 S{s_val}")
                 laser_on = True
-            gcode.append(f"G1 X{x:.3f} Y{y:.3f} F{feed_rate}")
+            gcode.append(f"G1 X{x:.3f} Y{y:.3f} F{burn_speed}")
             line_count += 1
 
         elif cmd_type == 'pad':
@@ -164,8 +175,9 @@ def generate_gcode(input_path: str = None, output_path: str = None,
     print(f"  Draw commands:  {line_count}")
     print(f"  Scale:         {scale}x")
     print(f"  Work area:     {scaled_w} x {scaled_h} mm")
-    print(f"  Feed rate:     {feed_rate} mm/min")
-    print(f"  Laser power:   S{LASER_POWER} (trace), S{PAD_LASER_POWER} (pad)")
+    print(f"  Burn speed:    {burn_speed} mm/min")
+    print(f"  Rapid speed:   {rapid_speed} mm/min")
+    print(f"  Laser power:   S{laser_power} (trace, M4), S{PAD_LASER_POWER} (pad, M3)")
     print(f"  Output:        {output_path}")
 
     return output_path

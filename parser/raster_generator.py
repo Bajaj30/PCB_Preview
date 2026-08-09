@@ -243,10 +243,10 @@ def generate_raster_toolpath(input_path=None, output_path=None,
     # Auto-calculate safety gap from laser spot size if not explicitly set
     # safety_gap = laser_diameter ensures the beam EDGE clears copper by laser_radius
     if safety_gap is None:
-        safety_gap = laser_diameter  # full diameter → beam edge clears by radius
+        safety_gap = laser_diameter  # full diameter -> beam edge clears by radius
 
     print(f"[raster] Loading: {input_path}")
-    print(f"[raster] Laser diameter: {laser_diameter} mm → safety gap: {safety_gap:.2f} mm")
+    print(f"[raster] Laser diameter: {laser_diameter} mm -> safety gap: {safety_gap:.2f} mm")
 
     with open(input_path, 'r') as f:
         data = json.load(f)

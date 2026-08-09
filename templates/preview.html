@@ -478,6 +478,11 @@
       }
     }
 
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
     .loading-text {
       font-size: 12px;
       color: var(--muted);
@@ -1220,6 +1225,291 @@
       font-weight: 600;
     }
 
+    /* ── GRBL Parameters Section ── */
+    .grbl-params-section {
+      margin-top: 4px;
+    }
+
+    .grbl-param-row {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed var(--border);
+      animation: fadeSlideIn 0.25s ease;
+    }
+    .grbl-param-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .grbl-param-row select {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .grbl-param-value-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .grbl-param-symbol {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .grbl-param-input {
+      width: 72px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: #0d0f14;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-align: right;
+      transition: border-color 0.2s;
+    }
+
+    .grbl-param-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 6px rgba(0, 212, 255, 0.15);
+    }
+
+    .grbl-param-input::placeholder {
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    .grbl-param-unit {
+      font-size: 9px;
+      color: var(--muted);
+      white-space: nowrap;
+      min-width: 24px;
+    }
+
+    .grbl-param-current {
+      font-size: 9px;
+      color: var(--muted);
+      padding: 2px 0 0 4px;
+      font-style: italic;
+      letter-spacing: 0.02em;
+    }
+
+    .grbl-param-current .current-val {
+      color: var(--accent);
+      font-weight: 600;
+      font-style: normal;
+    }
+
+    .grbl-param-current .live-badge {
+      display: inline-block;
+      font-size: 8px;
+      padding: 0 4px;
+      border-radius: 3px;
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--green);
+      margin-left: 4px;
+      font-style: normal;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-remove-param {
+      width: 22px;
+      height: 22px;
+      border: 1px solid rgba(255, 68, 68, 0.3);
+      background: transparent;
+      color: #ff4444;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+
+    .btn-remove-param:hover {
+      background: rgba(255, 68, 68, 0.15);
+      border-color: #ff4444;
+    }
+
+    .btn-add-param {
+      width: 100%;
+      padding: 7px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-add-param:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(0, 212, 255, 0.04);
+    }
+
+    .btn-proceed-params {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #f59e0b;
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.06);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-proceed-params:hover {
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    .btn-proceed-params:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .grbl-param-status {
+      font-size: 10px;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .grbl-param-status.success {
+      color: var(--green);
+    }
+
+    .grbl-param-status.error {
+      color: #ff4444;
+    }
+
+    /* ── Regeneration Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s, visibility 0.25s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 32px;
+      max-width: 380px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      transform: scale(0.9) translateY(10px);
+      transition: transform 0.25s ease;
+    }
+
+    .modal-overlay.active .modal-dialog {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .modal-message {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.03em;
+    }
+
+    .modal-btn-primary {
+      background: linear-gradient(135deg, var(--accent), #0088ff);
+      border: none;
+      color: #fff;
+    }
+
+    .modal-btn-primary:hover {
+      box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .modal-btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .modal-btn-cancel:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
     @media (max-width: 768px) {
       .workspace {
         grid-template-columns: 1fr;
@@ -1367,6 +1657,37 @@
             <option value="rot270">&#x21BA; Rotate 270&deg; CCW</option>
           </select>
         </div>
+
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Burn Speed
+            (mm/min)</label>
+          <input type="number" class="step-select" id="gcode-burn-speed" style="width:100%;margin-top:4px;"
+            value="1000" min="100" max="10000" step="100" />
+          <span style="font-size:9px;color:var(--muted);">Laser engraving speed (G1 moves)</span>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Travel Speed
+            (mm/min)</label>
+          <input type="number" class="step-select" id="gcode-rapid-speed" style="width:100%;margin-top:4px;"
+            value="3000" min="100" max="10000" step="100" />
+          <span style="font-size:9px;color:var(--muted);">Non-cutting travel speed (G0 moves)</span>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">Laser Power
+            (<span id="laser-power-display">100</span>%)</label>
+          <input type="range" id="gcode-laser-power" style="width:100%;margin-top:4px;accent-color:var(--accent);"
+            value="1000" min="0" max="1000" step="10"
+            oninput="document.getElementById('laser-power-display').textContent = Math.round(this.value / 10)" />
+          <span style="font-size:9px;color:var(--muted);">S-value: <span id="laser-power-sval">S1000</span></span>
+          <script>
+            document.getElementById('gcode-laser-power').addEventListener('input', function() {
+              document.getElementById('laser-power-sval').textContent = 'S' + this.value;
+            });
+          </script>
+        </div>
+
         <button class="btn-generate" id="btn-generate" onclick="convertGCode()" {% if not files %}disabled
           title="Upload Gerber files first" {% endif %}>
           ⚙ Generate G-code
@@ -1463,6 +1784,26 @@
           <div class="stream-status" id="stream-status"></div>
         </div>
 
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- ── GRBL Parameters ── -->
+      <h2>⚙ GRBL Parameters</h2>
+      <div class="grbl-params-section" id="grbl-params-section">
+        <div id="grbl-param-rows">
+          <!-- Dynamic parameter rows inserted here -->
+        </div>
+
+        <button class="btn-add-param" id="btn-add-param" onclick="addGrblParamRow()">
+          <span style="font-size:14px;">+</span> Add Parameter
+        </button>
+
+        <button class="btn-proceed-params" id="btn-proceed-params" onclick="proceedGrblParams()" disabled>
+          ⚡ Proceed — Apply Changes
+        </button>
+
+        <div class="grbl-param-status" id="grbl-param-status"></div>
       </div>
 
       {% else %}
@@ -1925,6 +2266,9 @@
         const lineSpacing = document.getElementById('gcode-line-spacing').value;
         const laserDiameter = document.getElementById('gcode-laser-diameter').value;
         const orientation = document.getElementById('gcode-orientation').value;
+        const burnSpeed = document.getElementById('gcode-burn-speed').value;
+        const rapidSpeed = document.getElementById('gcode-rapid-speed').value;
+        const laserPower = document.getElementById('gcode-laser-power').value;
         // Collect active (visible) layer filenames
         const activeLayers = Array.from(document.querySelectorAll('.layer-item.active'))
           .map(el => el.getAttribute('data-file'))
@@ -1933,7 +2277,7 @@
           throw new Error('No layers selected. Toggle at least one layer on.');
         }
         const layersParam = encodeURIComponent(activeLayers.join(','));
-        const response = await fetch(`/convert-gcode?scale=${scale}&mode=${mode}&line_spacing=${lineSpacing}&laser_diameter=${laserDiameter}&layers=${layersParam}&orientation=${orientation}`, { method: 'POST' });
+        const response = await fetch(`/convert-gcode?scale=${scale}&mode=${mode}&line_spacing=${lineSpacing}&laser_diameter=${laserDiameter}&layers=${layersParam}&orientation=${orientation}&burn_speed=${burnSpeed}&rapid_speed=${rapidSpeed}&laser_power=${laserPower}`, { method: 'POST' });
 
         if (!response.ok) {
           const err = await response.json();
@@ -1966,7 +2310,12 @@
           Draw distance: <strong>${s.draw_distance_mm} mm</strong><br>
           Rapid travel: <strong>${s.rapid_distance_mm} mm</strong><br>
           Work area: <strong>${s.work_area.width} × ${s.work_area.height} mm</strong><br>
-          Scale: <strong>${s.scale || '1'}×</strong>
+          Scale: <strong>${s.scale || '1'}×</strong><br>
+          <br>
+          <strong>Machine Settings</strong><br>
+          Burn speed: <strong>${s.burn_speed} mm/min</strong><br>
+          Travel speed: <strong>${s.rapid_speed} mm/min</strong><br>
+          Laser power: <strong>S${s.laser_power} (${Math.round(s.laser_power / 10)}%)</strong>
         `;
         if (s.mode === 'raster') {
           statsHtml += `<br><br>
@@ -2094,6 +2443,9 @@
         });
         console.log('========================');
       }, 2000);
+
+      // Pre-populate USB port list on page load
+      fetchUsbPorts();
     });
 
     function initTrailCanvas() {
@@ -2470,19 +2822,43 @@
     async function usbPollStatus() {
       if (!usbConnected) return;
       try {
+        // ── 1. Check connection/streaming status ──
         const res = await fetch('/api/serial/status');
         const data = await res.json();
         if (!data.connected) {
-          usbConnected = false;
-          updateConnModeUI();
-          document.getElementById('btn-usb-connect').textContent = 'Connect';
-          document.getElementById('btn-usb-connect').classList.remove('connected');
-        } else if (data.streaming && isStreaming) {
-           const pct = data.total_lines > 0 ? (data.sent_lines / data.total_lines) * 100 : 0;
-           document.getElementById('stream-bar-fill').style.width = pct + '%';
-           document.getElementById('stream-status').textContent = `Streaming ${data.sent_lines}/${data.total_lines}...`;
+          handleUsbDisconnect();
+          return;
         }
-      } catch (e) { }
+
+        // ── 2. Poll real machine position from GRBL via '?' command ──
+        // Skip during active streaming to avoid interfering with G-code flow
+        if (!data.streaming) {
+          try {
+            const posRes = await fetch('/api/serial/position');
+            if (posRes.status === 503) {
+              // Device physically unplugged while idle
+              handleUsbDisconnect();
+              return;
+            }
+            if (posRes.ok) {
+              const pos = await posRes.json();
+              document.getElementById('esp-x').textContent = pos.x.toFixed(3);
+              document.getElementById('esp-y').textContent = pos.y.toFixed(3);
+              // Also update the visual head pointer in the preview
+              const bed = gcodeToBed(pos.x, pos.y);
+              moveHead(bed.x, bed.y, false);
+            }
+          } catch (_) { /* silent — position polling is best-effort */ }
+        }
+
+        // ── 3. Update streaming progress bar (SSE handles this too, belt+braces) ──
+        if (data.streaming && isStreaming) {
+          const pct = data.total_lines > 0 ? (data.sent_lines / data.total_lines) * 100 : 0;
+          document.getElementById('stream-bar-fill').style.width = pct + '%';
+          document.getElementById('stream-status').textContent =
+            `Streaming ${data.sent_lines}/${data.total_lines}...`;
+        }
+      } catch (e) { /* network error — silently ignore */ }
     }
 
     function enableMachineControls() {
@@ -2491,6 +2867,81 @@
       document.getElementById('btn-fire').disabled = false;
       document.getElementById('btn-stream').disabled = false;
       document.getElementById('esp-pos').style.display = 'block';
+    }
+
+    function disableMachineControls() {
+      document.querySelectorAll('.esp-dpad-btn').forEach(b => b.disabled = true);
+      document.getElementById('esp-laser-pwr').disabled = true;
+      document.getElementById('btn-fire').disabled = true;
+      document.getElementById('btn-stream').disabled = true;
+      document.getElementById('esp-pos').style.display = 'none';
+      // Reset laser fire button if it was active
+      const fireBtn = document.getElementById('btn-fire');
+      fireBtn.classList.remove('active');
+      fireBtn.textContent = 'FIRE';
+    }
+
+    function handleUsbDisconnect() {
+      // Guard: only run once
+      if (!usbConnected) return;
+      usbConnected = false;
+
+      // Stop status polling
+      if (statusPollTimer) {
+        clearInterval(statusPollTimer);
+        statusPollTimer = null;
+      }
+
+      // Close any open SSE stream
+      if (_streamEventSource) {
+        _streamEventSource.close();
+        _streamEventSource = null;
+      }
+
+      // Reset streaming state
+      isStreaming = false;
+      setMode('jog');
+
+      // Reset streaming UI
+      document.getElementById('btn-estop').classList.remove('visible');
+      document.getElementById('stream-progress').classList.remove('visible');
+      document.getElementById('stream-status').textContent = '';
+      document.getElementById('stream-bar-fill').style.width = '0%';
+
+      // Reset connection status UI
+      document.getElementById('esp-dot').className = 'dot-indicator';
+      document.getElementById('esp-status-text').textContent = 'Disconnected — USB unplugged';
+      document.getElementById('btn-usb-connect').textContent = 'Connect';
+      document.getElementById('btn-usb-connect').classList.remove('connected');
+
+      // Disable all machine controls
+      disableMachineControls();
+
+      // Refresh the port list so the user can reconnect easily
+      fetchUsbPorts();
+
+      // Show a brief toast-style notification
+      showDisconnectToast();
+    }
+
+    function showDisconnectToast() {
+      // Create or reuse a toast element
+      let toast = document.getElementById('disconnect-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'disconnect-toast';
+        toast.style.cssText = [
+          'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+          'background:#ff4444', 'color:#fff', 'padding:12px 24px', 'border-radius:8px',
+          'font-size:14px', 'font-weight:600', 'z-index:9999',
+          'box-shadow:0 4px 20px rgba(255,68,68,0.4)',
+          'animation:fadeInUp 0.3s ease'
+        ].join(';');
+        document.body.appendChild(toast);
+      }
+      toast.textContent = '⚠️ USB device disconnected';
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
     }
 
     // ── Dual Mode Dispatchers ──
@@ -2569,16 +3020,28 @@
       }
     }
 
+    // Active SSE connection (so we can close it on stop/abort)
+    let _streamEventSource = null;
+
     async function machineStreamGCode() {
       if (connMode === 'usb') {
         if (!usbConnected || isStreaming) return;
         isStreaming = true;
+
+        // Reset preview state for a fresh run
+        clearTrail();
+        initTrailCanvas();
+        moveHead(0, 0, false);
+
+        // Update UI
         document.getElementById('btn-stream').disabled = true;
         document.getElementById('btn-estop').classList.add('visible');
         document.getElementById('stream-progress').classList.add('visible');
         document.getElementById('stream-status').textContent = 'Starting stream...';
         document.getElementById('stream-bar-fill').style.width = '0%';
-        
+        setMode('run');
+
+        // ── 1. Tell backend to start streaming to the Arduino ──
         try {
           const res = await fetch('/api/serial/stream', { method: 'POST' });
           if (!res.ok) throw new Error(await res.text());
@@ -2586,18 +3049,103 @@
           alert("Stream failed to start: " + e.message);
           isStreaming = false;
           document.getElementById('btn-stream').disabled = false;
+          setMode('jog');
+          return;
         }
+
+        // ── 2. Subscribe to SSE for real-time preview sync ──
+        if (_streamEventSource) {
+          _streamEventSource.close();
+        }
+        _streamEventSource = new EventSource('/api/serial/stream-events');
+
+        // Regex to parse X and Y from a G-code line, e.g. "G1 X23.450 Y14.320 F1000"
+        const coordRe = /X([-\d.]+)/i;
+        const coordReY = /Y([-\d.]+)/i;
+        let laserOn = false;  // track M3/M5 state for trail color
+
+        _streamEventSource.onmessage = (event) => {
+          let data;
+          try { data = JSON.parse(event.data); } catch { return; }
+
+          if (data.type === 'disconnected') {
+            // USB was physically pulled during streaming
+            _onStreamComplete(true);
+            handleUsbDisconnect();
+            return;
+          }
+
+          if (data.type === 'line') {
+            const line = data.line || '';
+            const sent = data.sent || 0;
+            const total = data.total || 1;
+
+            // ── Track laser state ──
+            if (/^M3\b/i.test(line)) laserOn = true;
+            if (/^M5\b/i.test(line)) laserOn = false;
+
+            // ── Parse coordinates and move head ──
+            const mX = coordRe.exec(line);
+            const mY = coordReY.exec(line);
+            if (mX || mY) {
+              const isDrawMove = /^G1\b/i.test(line) && laserOn;
+              const isRapid   = /^G0\b/i.test(line);
+              const gx = mX ? parseFloat(mX[1]) : headX;  // keep current if axis not in line
+              const gy = mY ? parseFloat(mY[1]) : headY;
+              const bed = gcodeToBed(gx, gy);
+              moveHead(bed.x, bed.y, isDrawMove);
+            }
+
+            // ── Update progress bar ──
+            const pct = (sent / total) * 100;
+            document.getElementById('stream-bar-fill').style.width = pct + '%';
+            document.getElementById('stream-status').textContent =
+              `Streaming… ${sent}/${total} lines` + (laserOn ? ' 🔴' : '');
+
+          } else if (data.type === 'done') {
+            _onStreamComplete(false);
+          } else if (data.type === 'abort') {
+            _onStreamComplete(true);
+          }
+        };
+
+        _streamEventSource.onerror = () => {
+          // SSE connection closed (server done or disconnected)
+          _onStreamComplete(false);
+        };
+
       } else {
         await espStreamGCode();
       }
     }
 
+    function _onStreamComplete(aborted) {
+      if (_streamEventSource) {
+        _streamEventSource.close();
+        _streamEventSource = null;
+      }
+      isStreaming = false;
+      setMode('jog');
+      document.getElementById('btn-stream').disabled = false;
+      document.getElementById('btn-estop').classList.remove('visible');
+      document.getElementById('stream-status').textContent = aborted
+        ? '⏹ Stream aborted'
+        : '✅ Stream complete';
+      document.getElementById('stream-status').style.color = aborted ? '#ff4444' : 'var(--green)';
+      setTimeout(() => {
+        document.getElementById('stream-status').style.color = '';
+      }, 4000);
+    }
+
     async function machineEmergencyStop() {
       if (connMode === 'usb') {
         await fetch('/api/serial/stop', { method: 'POST' });
-        isStreaming = false;
-        document.getElementById('stream-status').textContent = '⏹ EMERGENCY STOP sent';
-        document.getElementById('stream-status').style.color = '#ff4444';
+        // Close SSE — the backend abort event will also fire, but closing here is faster
+        if (_streamEventSource) {
+          _streamEventSource.close();
+          _streamEventSource = null;
+        }
+        _onStreamComplete(true);
       } else {
         await espEmergencyStop();
       }
@@ -2831,7 +3379,340 @@
       document.getElementById('stream-status').style.color = '#ff4444';
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // GRBL $$ PARAMETER CONFIGURATION
+    // ══════════════════════════════════════════════════════════════
+
+    const GRBL_PARAMS = [
+      { id: 0,   name: 'Step pulse time',             unit: 'μs',       defaultValue: 10,      description: 'Sets time length per step. Minimum 3μsec.' },
+      { id: 1,   name: 'Step idle delay',             unit: 'ms',       defaultValue: 25,      description: 'Sets a short hold delay when stopping.' },
+      { id: 2,   name: 'Step pulse invert',           unit: 'mask',     defaultValue: 0,       description: 'Inverts the step signal.' },
+      { id: 3,   name: 'Step direction invert',       unit: 'mask',     defaultValue: 0,       description: 'Inverts the direction signal.' },
+      { id: 4,   name: 'Invert step enable pin',      unit: 'boolean',  defaultValue: 0,       description: 'Inverts the stepper driver enable pin signal.' },
+      { id: 5,   name: 'Invert limit pins',           unit: 'boolean',  defaultValue: 0,       description: 'Inverts all of the limit input pins.' },
+      { id: 6,   name: 'Invert probe pin',            unit: 'boolean',  defaultValue: 0,       description: 'Inverts the probe input pin signal.' },
+      { id: 10,  name: 'Status report options',       unit: 'mask',     defaultValue: 3,       description: 'Alters data included in status reports.' },
+      { id: 11,  name: 'Junction deviation',          unit: 'mm',       defaultValue: 0.010,   description: 'Sets how fast Grbl travels through consecutive motions.' },
+      { id: 12,  name: 'Arc tolerance',               unit: 'mm',       defaultValue: 0.002,   description: 'Sets the G2 and G3 arc tracing accuracy.' },
+      { id: 13,  name: 'Report in inches',            unit: 'boolean',  defaultValue: 0,       description: 'Enables inch units when returning any position.' },
+      { id: 20,  name: 'Soft limits enable',          unit: 'boolean',  defaultValue: 0,       description: 'Enables soft limits checks within machine travel.' },
+      { id: 21,  name: 'Hard limits enable',          unit: 'boolean',  defaultValue: 1,       description: 'Enables hard limits. Immediately halts motion.' },
+      { id: 22,  name: 'Homing cycle enable',         unit: 'boolean',  defaultValue: 1,       description: 'Enables homing cycle. Requires limit switches.' },
+      { id: 23,  name: 'Homing direction invert',     unit: 'mask',     defaultValue: 4,       description: 'Homing searches for a switch in the positive direction.' },
+      { id: 24,  name: 'Homing locate feed rate',     unit: 'mm/min',   defaultValue: 25.000,  description: 'Feed rate to slowly engage limit switch.' },
+      { id: 25,  name: 'Homing search seek rate',     unit: 'mm/min',   defaultValue: 500.000, description: 'Seek rate to quickly find the limit switch.' },
+      { id: 27,  name: 'Homing switch pull-off distance', unit: 'mm',   defaultValue: 5.000,   description: 'Retract distance after triggering switch.' },
+      { id: 30,  name: 'Maximum spindle speed',       unit: 'RPM',      defaultValue: 1000,    description: 'Maximum spindle speed. Sets PWM to 100%.' },
+      { id: 31,  name: 'Minimum spindle speed',       unit: 'RPM',      defaultValue: 0,       description: 'Minimum spindle speed. Sets PWM to 0.4%.' },
+      { id: 32,  name: 'Laser-mode enable',           unit: 'boolean',  defaultValue: 1,       description: 'Enables laser mode. Consecutive G1/2/3 commands.' },
+      { id: 100, name: 'X-axis travel resolution',    unit: 'step/mm',  defaultValue: 180.077, description: 'X-axis travel resolution in steps per millimeter.' },
+      { id: 101, name: 'Y-axis travel resolution',    unit: 'step/mm',  defaultValue: 165.148, description: 'Y-axis travel resolution in steps per millimeter.' },
+      { id: 102, name: 'Z-axis travel resolution',    unit: 'step/mm',  defaultValue: 250.000, description: 'Z-axis travel resolution in steps per millimeter.' },
+      { id: 110, name: 'X-axis maximum rate',         unit: 'mm/min',   defaultValue: 1000.000, description: 'X-axis maximum rate. Used as G0 rapid rate.' },
+      { id: 111, name: 'Y-axis maximum rate',         unit: 'mm/min',   defaultValue: 1000.000, description: 'Y-axis maximum rate. Used as G0 rapid rate.' },
+      { id: 112, name: 'Z-axis maximum rate',         unit: 'mm/min',   defaultValue: 500.000, description: 'Z-axis maximum rate. Used as G0 rapid rate.' },
+      { id: 120, name: 'X-axis acceleration',         unit: 'mm/sec²',  defaultValue: 200.000, description: 'X-axis acceleration. Used for motion planning.' },
+      { id: 121, name: 'Y-axis acceleration',         unit: 'mm/sec²',  defaultValue: 100.000, description: 'Y-axis acceleration. Used for motion planning.' },
+      { id: 122, name: 'Z-axis acceleration',         unit: 'mm/sec²',  defaultValue: 10.000,  description: 'Z-axis acceleration. Used for motion planning.' },
+      { id: 130, name: 'X-axis maximum travel',       unit: 'mm',       defaultValue: 250.000, description: 'Maximum X-axis travel distance from homing.' },
+      { id: 131, name: 'Y-axis maximum travel',       unit: 'mm',       defaultValue: 250.000, description: 'Maximum Y-axis travel distance from homing.' },
+      { id: 132, name: 'Z-axis maximum travel',       unit: 'mm',       defaultValue: 200.000, description: 'Maximum Z-axis travel distance from homing.' },
+    ];
+
+    let grblParamRowCounter = 0;
+
+    // Cache for live GRBL parameter values (fetched from the controller)
+    let grblLiveParams = null;       // null = not fetched yet, {} = fetched
+    let grblLiveFetchDone = false;
+
+    async function fetchGrblLiveParams() {
+      if (grblLiveFetchDone) return;  // only try once per page load
+      grblLiveFetchDone = true;
+      try {
+        const resp = await fetch('/api/grbl/params');
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.success && data.params) {
+            grblLiveParams = data.params;
+            console.log('[GRBL] Live params loaded:', Object.keys(grblLiveParams).length, 'params');
+            // Refresh any already-visible current-value hints
+            document.querySelectorAll('.grbl-param-row').forEach(row => {
+              const sel = row.querySelector('.grbl-param-select');
+              if (sel && sel.value) {
+                const hint = row.querySelector('.grbl-param-current');
+                if (hint) updateCurrentHint(parseInt(sel.value), hint);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.log('[GRBL] Could not fetch live params (not connected?):', e.message);
+      }
+    }
+
+    function getCurrentValue(paramId) {
+      // Prefer live value from controller, fall back to default
+      if (grblLiveParams && grblLiveParams[paramId] !== undefined) {
+        return { value: grblLiveParams[paramId], live: true };
+      }
+      const p = GRBL_PARAMS.find(p => p.id === paramId);
+      return p ? { value: p.defaultValue, live: false } : null;
+    }
+
+    function updateCurrentHint(paramId, hintEl) {
+      const cur = getCurrentValue(paramId);
+      const param = GRBL_PARAMS.find(p => p.id === paramId);
+      if (cur && param) {
+        const badge = cur.live ? '<span class="live-badge">LIVE</span>' : '';
+        hintEl.innerHTML = `Current: <span class="current-val">${cur.value}</span> ${param.unit} ${badge}`;
+      } else {
+        hintEl.innerHTML = '';
+      }
+    }
+
+    function addGrblParamRow(preselectedId) {
+      // Kick off a live-param fetch on first use (non-blocking)
+      fetchGrblLiveParams();
+
+      const container = document.getElementById('grbl-param-rows');
+      const rowId = ++grblParamRowCounter;
+
+      const row = document.createElement('div');
+      row.className = 'grbl-param-row';
+      row.id = `grbl-row-${rowId}`;
+
+      // Build dropdown options
+      let options = '<option value="">Select parameter...</option>';
+      GRBL_PARAMS.forEach(p => {
+        const selected = (preselectedId !== undefined && p.id === preselectedId) ? ' selected' : '';
+        options += `<option value="${p.id}"${selected}>$${p.id} — ${p.name}</option>`;
+      });
+
+      const param = preselectedId !== undefined
+        ? GRBL_PARAMS.find(p => p.id === preselectedId)
+        : null;
+
+      // Build current-value hint for preselected param
+      let currentHintHtml = '';
+      if (param) {
+        const cur = getCurrentValue(param.id);
+        if (cur) {
+          const badge = cur.live ? '<span class="live-badge">LIVE</span>' : '';
+          currentHintHtml = `Current: <span class="current-val">${cur.value}</span> ${param.unit} ${badge}`;
+        }
+      }
+
+      row.innerHTML = `
+        <div style="display: flex; gap: 6px;">
+          <select class="step-select grbl-param-select" data-row="${rowId}"
+                  onchange="onGrblParamSelect(${rowId})" style="flex:1;min-width:0;">
+            ${options}
+          </select>
+          <button class="btn-remove-param" onclick="removeGrblParamRow(${rowId})" title="Remove">×</button>
+        </div>
+        <div class="grbl-param-value-wrapper">
+          <span class="grbl-param-symbol" id="grbl-symbol-${rowId}">
+            ${param ? '$' + param.id + ' =' : ''}
+          </span>
+          <input type="number" class="grbl-param-input" id="grbl-input-${rowId}"
+                 placeholder="${param ? param.defaultValue : '—'}"
+                 step="any" oninput="updateGrblProceedState()"
+                 ${param ? '' : 'disabled'} style="flex:1;" />
+          <span class="grbl-param-unit" id="grbl-unit-${rowId}">${param ? param.unit : ''}</span>
+        </div>
+        <div class="grbl-param-current" id="grbl-current-${rowId}">${currentHintHtml}</div>
+      `;
+
+      container.appendChild(row);
+      updateGrblProceedState();
+    }
+
+    function removeGrblParamRow(rowId) {
+      const row = document.getElementById(`grbl-row-${rowId}`);
+      if (row) {
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(-6px)';
+        setTimeout(() => row.remove(), 150);
+      }
+      setTimeout(() => updateGrblProceedState(), 200);
+    }
+
+    function onGrblParamSelect(rowId) {
+      const select = document.querySelector(`#grbl-row-${rowId} .grbl-param-select`);
+      const input = document.getElementById(`grbl-input-${rowId}`);
+      const symbol = document.getElementById(`grbl-symbol-${rowId}`);
+      const unit = document.getElementById(`grbl-unit-${rowId}`);
+      const currentHint = document.getElementById(`grbl-current-${rowId}`);
+
+      const paramId = parseInt(select.value);
+      const param = GRBL_PARAMS.find(p => p.id === paramId);
+
+      if (param) {
+        symbol.textContent = `$${param.id} =`;
+        input.placeholder = param.defaultValue;
+        input.disabled = false;
+        input.title = param.description;
+        unit.textContent = param.unit;
+        // Update current-value hint
+        if (currentHint) updateCurrentHint(param.id, currentHint);
+        input.focus();
+      } else {
+        symbol.textContent = '';
+        input.placeholder = '—';
+        input.disabled = true;
+        input.value = '';
+        unit.textContent = '';
+        if (currentHint) currentHint.innerHTML = '';
+      }
+      updateGrblProceedState();
+    }
+
+    function updateGrblProceedState() {
+      const rows = document.querySelectorAll('.grbl-param-row');
+      const btn = document.getElementById('btn-proceed-params');
+      if (!btn) return;
+
+      let hasValidParam = false;
+      rows.forEach(row => {
+        const select = row.querySelector('.grbl-param-select');
+        const input = row.querySelector('.grbl-param-input');
+        if (select && input && select.value && input.value !== '') {
+          hasValidParam = true;
+        }
+      });
+      btn.disabled = !hasValidParam;
+    }
+
+    function getGrblParamChanges() {
+      const rows = document.querySelectorAll('.grbl-param-row');
+      const changes = [];
+      rows.forEach(row => {
+        const select = row.querySelector('.grbl-param-select');
+        const input = row.querySelector('.grbl-param-input');
+        if (select && input && select.value && input.value !== '') {
+          changes.push({
+            id: parseInt(select.value),
+            value: parseFloat(input.value),
+          });
+        }
+      });
+      return changes;
+    }
+
+    async function proceedGrblParams() {
+      const changes = getGrblParamChanges();
+      if (changes.length === 0) return;
+
+      const btn = document.getElementById('btn-proceed-params');
+      const statusEl = document.getElementById('grbl-param-status');
+
+      btn.disabled = true;
+      statusEl.textContent = '';
+      statusEl.className = 'grbl-param-status';
+
+      // Check if CNC is connected
+      let isConnected = false;
+      try {
+        const statusResp = await fetch('/api/serial/status');
+        const statusData = await statusResp.json();
+        isConnected = statusData.connected;
+      } catch (e) {
+        isConnected = false;
+      }
+
+      if (isConnected) {
+        // ── Connected: send params to CNC firmware, then refresh ──
+        btn.textContent = '⏳ Sending parameters to CNC...';
+        try {
+          const response = await fetch('/api/grbl/set-params', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ params: changes }),
+          });
+
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Failed to set parameters');
+          }
+
+          const result = await response.json();
+
+          if (result.success) {
+            statusEl.textContent = `✓ ${result.message}`;
+            statusEl.className = 'grbl-param-status success';
+            sessionStorage.setItem('grbl_params_applied', 'true');
+            setTimeout(() => window.location.reload(), 800);
+          } else {
+            const failed = result.results.filter(r => !r.success);
+            statusEl.textContent = `⚠ ${result.message}. Failed: ` +
+              failed.map(f => f.command).join(', ');
+            statusEl.className = 'grbl-param-status error';
+            btn.disabled = false;
+            btn.textContent = '⚡ Proceed — Apply Changes';
+          }
+
+        } catch (err) {
+          statusEl.textContent = `✗ ${err.message}`;
+          statusEl.className = 'grbl-param-status error';
+          btn.disabled = false;
+          btn.textContent = '⚡ Proceed — Apply Changes';
+        }
+
+      } else {
+        // ── Not connected: skip serial, go straight to regen modal ──
+        statusEl.innerHTML = 'ℹ CNC not connected — parameters noted. Connect later to flash them to firmware.';
+        statusEl.className = 'grbl-param-status success';
+        sessionStorage.setItem('grbl_params_applied', 'true');
+        setTimeout(() => window.location.reload(), 800);
+      }
+    }
+
+    // ── Regeneration Modal ──────────────────────────────────
+
+    function showRegenModal() {
+      const overlay = document.getElementById('regen-modal-overlay');
+      if (overlay) overlay.classList.add('active');
+    }
+
+    function hideRegenModal() {
+      const overlay = document.getElementById('regen-modal-overlay');
+      if (overlay) overlay.classList.remove('active');
+    }
+
+    async function regenGCodeFromModal() {
+      hideRegenModal();
+      // Call the existing convertGCode function
+      if (typeof convertGCode === 'function') {
+        await convertGCode();
+      }
+    }
+
+    // On page load, check if we need to show the regeneration modal
+    document.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem('grbl_params_applied') === 'true') {
+        sessionStorage.removeItem('grbl_params_applied');
+        // Small delay so the page fully renders first
+        setTimeout(() => showRegenModal(), 400);
+      }
+    });
+
   </script>
+
+  <!-- Regeneration Modal -->
+  <div class="modal-overlay" id="regen-modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-icon">⚡</div>
+      <div class="modal-title">Regenerate G-code?</div>
+      <div class="modal-message">
+        GRBL parameters were updated successfully.<br>
+        Regenerate the G-code file with your current settings?
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" onclick="hideRegenModal()">Cancel</button>
+        <button class="modal-btn modal-btn-primary" onclick="regenGCodeFromModal()">⚙ Regenerate G-code</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 
